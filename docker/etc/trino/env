@@ -1,0 +1,5 @@
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+export JAVA_HOME=/lib/java-22-jre
+export PATH=$PATH:$JAVA_HOME/bin
+export TRINO_HOME=/lib/trino
+export PATH=$TRINO_HOME/bin:$PATH

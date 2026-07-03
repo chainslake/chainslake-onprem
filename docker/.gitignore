@@ -1,0 +1,5 @@
+.env
+home
+postgres_data
+hadoop_data_node01
+hadoop_data_node02

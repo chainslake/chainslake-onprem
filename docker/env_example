@@ -1,0 +1,7 @@
+POSTGRES_PASSWORD=postgresexamplepassword
+POSTGRES_DATA_DIR=./postgres_data
+NODE01_DATA_DIR=./hadoop_data_node01
+NODE02_DATA_DIR=./hadoop_data_node02
+CHAINSLAKE_HOME_DIR=/home/hadoop/projects/chainslake
+CHAINSLAKE_RUN_DIR=/home/hadoop/projects/chainslake-run
+CHAINSLAKE_JAR=/home/hadoop/chainslake.jar

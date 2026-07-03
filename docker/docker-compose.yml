@@ -1,0 +1,94 @@
+name: chainslake-onprem
+services:
+  postgres:
+    restart: always
+    image: postgres:14
+    networks:
+      - chainslake-onprem-network
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: "/var/lib/postgresql/data"
+    volumes:
+      - ${POSTGRES_DATA_DIR}:/var/lib/postgresql/data
+      - ./etc/postgres/init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
+    command: postgres -c 'max_connections=250'
+  
+  node01:
+    restart: always
+    image: lakechain/chainslake
+    networks:
+      - chainslake-onprem-network
+    hostname: node01
+    depends_on:
+      - postgres
+      - node02
+    ports:
+      - "127.0.0.1:58080:8080"
+      - "127.0.0.1:59870:9870"
+      - "127.0.0.1:59001:9001"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD}@postgres:5432/airflow_db
+      CHAINSLAKE_HOME_DIR: ${CHAINSLAKE_HOME_DIR}
+      CHAINSLAKE_RUN_DIR: ${CHAINSLAKE_RUN_DIR}
+    volumes:
+      - ./home:/home/hadoop
+      - ../chainslake:/home/hadoop/projects/chainslake
+      - ../chainslake-run:/home/hadoop/projects/chainslake-run
+      - ${NODE01_DATA_DIR}:/hadoop_data
+      - ./etc/bash.bashrc:/etc/bash.bashrc
+      - ./etc/hadoop/hadoop-env.sh:/lib/hadoop/etc/hadoop/hadoop-env.sh
+      - ./etc/hadoop/core-site.xml:/lib/hadoop/etc/hadoop/core-site.xml
+      - ./etc/hadoop/hdfs-site.xml:/lib/hadoop/etc/hadoop/hdfs-site.xml
+      - ./etc/hadoop/yarn-site.xml:/lib/hadoop/etc/hadoop/yarn-site.xml
+      - ./etc/hadoop/workers:/lib/hadoop/etc/hadoop/workers
+      - ./etc/hive/hive-site.xml:/lib/hive/conf/hive-site.xml 
+      - ./etc/hive/hive-site.xml:/lib/spark/conf/hive-site.xml
+      - ./etc/spark/spark-env.sh:/lib/spark/conf/spark-env.sh
+      - ./etc/trino:/lib/trino/etc
+      - ./etc/supervisord_node01.conf:/etc/supervisord.conf
+      - ./etc/sbin:/lib/sbin
+  node02:
+    restart: always
+    image: lakechain/chainslake
+    networks:
+      - chainslake-onprem-network
+    hostname: node02
+    volumes:
+      - ${NODE02_DATA_DIR}:/hadoop_data
+      - ./etc/bash.bashrc:/etc/bash.bashrc
+      - ./etc/hadoop/hadoop-env.sh:/lib/hadoop/etc/hadoop/hadoop-env.sh
+      - ./etc/hadoop/core-site.xml:/lib/hadoop/etc/hadoop/core-site.xml
+      - ./etc/hadoop/hdfs-site.xml:/lib/hadoop/etc/hadoop/hdfs-site.xml
+      - ./etc/hadoop/yarn-site.xml:/lib/hadoop/etc/hadoop/yarn-site.xml
+      - ./etc/hive/hive-site.xml:/lib/hive/conf/hive-site.xml 
+      - ./etc/hive/hive-site.xml:/lib/spark/conf/hive-site.xml
+      - ./etc/spark/spark-env.sh:/lib/spark/conf/spark-env.sh
+      - ./etc/trino:/lib/trino/etc
+      - ./etc/supervisord_node02.conf:/etc/supervisord.conf
+      - ./etc/sbin:/lib/sbin
+  metabase:
+    restart: always
+    image: metabase/metabase
+    networks:
+      - chainslake-onprem-network
+    depends_on:
+      - postgres
+      - node01
+    ports:
+      - "127.0.0.1:53000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: postgres
+      MB_DB_PASS: ${POSTGRES_PASSWORD}
+      MB_DB_HOST: postgres
+      MB_JDBC_DATA_WAREHOUSE_UNRETURNED_CONNECTION_TIMEOUT_SECONDS: 86400
+
+networks:
+  chainslake-onprem-network:
+    driver: bridge
