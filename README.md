@@ -20,7 +20,8 @@ Repository này giới thiệu giải pháp **Onprem**, phù hợp với nhóm k
    - [application.properties — Cấu hình pipeline](#applicationproperties--cấu-hình-pipeline)
 6. [Luồng hoạt động](#luồng-hoạt-động)
 7. [Ví dụ chi tiết: Pipeline Ethereum](#ví-dụ-chi-tiết-pipeline-ethereum)
-8. [Liên hệ](#liên-hệ)
+8. [Lấy schema 1 bảng bất ký trong Datawarehouse](#lấy-schema-1-bảng-bất-kỳ-trong-datawarehouse)
+9. [Liên hệ](#liên-hệ)
 
 ---
 
@@ -428,6 +429,12 @@ cd /home/hadoop/projects/chainslake/jobs/ethereum
 ./extract/blocks.sh
 ```
 
+Hoặc có thể gọi trực tiếp từ bên ngoài qua lệnh sau:
+
+```bash
+docker exec -u hadoop chainslake-onprem-node01-1 bash -c "export PS1='something' && source /etc/bash.bashrc && cd /home/hadoop/projects/chainslake/jobs/ethereum && ./extract/blocks.sh" 2>&1
+```
+
 ### Thêm một pipeline mới (ví dụ: BNB Chain)
 
 1. Tạo thư mục `chainslake/jobs/bnb/`
@@ -435,6 +442,24 @@ cd /home/hadoop/projects/chainslake/jobs/ethereum
 3. Tạo các script `.sh` cho từng job (origin, extract, contract)
 4. Tạo DAG mới `chainslake/airflow/dags/bnb.py`
 5. Nếu cần decode contract mới, thêm ABI vào `chainslake/evm/abi/`
+
+---
+
+## Lấy schema 1 bảng bất kỳ trong Datawarehouse
+
+Để sử dụng tính năng này bạn cần tạo METABASE_API_KEY từ trang: http://localhost:53000/admin/settings/authentication sau đó cho vào file `query/.env`
+
+```.env
+METABASE_API_KEY=<API key được tạo từ: http://localhost:53000/admin/settings/authentication>
+```
+
+Để lấy schema bảng `ethereum.transactions`:
+
+```sh
+python query/get_example_table.py ethereum.transactions
+```
+
+Kết quả trả về schema (bao gồm tên column và type) cùng với 1 bản ghi làm ví dụ của bảng `ethereum.transactions`
 
 ---
 
