@@ -52,7 +52,6 @@ NODE02_DATA_DIR=./hadoop_data_node02
 # Đường dẫn trong container
 CHAINSLAKE_HOME_DIR=/home/hadoop/projects/chainslake
 CHAINSLAKE_RUN_DIR=/home/hadoop/projects/chainslake-run
-CHAINSLAKE_JAR=/home/hadoop/chainslake.jar
 ```
 
 ---
