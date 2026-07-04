@@ -73,6 +73,15 @@ with DAG(
 
     ethereum_logs >> ethereum_decoded_erc20_evt_transfer
 
+    ############################################# Contract ###########################################
+
+    ethereum_contract_erc20_tokens = BashOperator(
+        task_id="ethereum_contract.erc20_tokens",
+        bash_command=f"cd {RUN_DIR} && ./contract/erc20_tokens.sh "
+    )
+
+    ethereum_decoded_erc20_evt_transfer >> ethereum_contract_erc20_tokens
+
     ############################################# TOKEN ###########################################
 
     ethereum_token_erc20_transfer = BashOperator(
