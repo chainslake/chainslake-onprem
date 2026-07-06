@@ -26,7 +26,7 @@ with DAG(
     is_paused_upon_creation=True,
 ) as dag:
 
-########################### ORIGIN ##########################################
+    ########################### ORIGIN ##########################################
 
     RUN_DIR = os.environ.get("CHAINSLAKE_HOME_DIR") + "/jobs/ethereum"
 
@@ -90,5 +90,6 @@ with DAG(
     )
 
     [ethereum_transactions, ethereum_decoded_erc20_evt_transfer] >> ethereum_token_erc20_transfer
+    ethereum_contract_erc20_tokens >> ethereum_token_erc20_transfer
 
 
