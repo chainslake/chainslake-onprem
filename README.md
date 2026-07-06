@@ -20,7 +20,7 @@ Repository này giới thiệu giải pháp **Onprem**, phù hợp với nhóm k
    - [application.properties — Cấu hình pipeline](#applicationproperties--cấu-hình-pipeline)
 6. [Luồng hoạt động](#luồng-hoạt-động)
 7. [Ví dụ chi tiết: Pipeline Ethereum](#ví-dụ-chi-tiết-pipeline-ethereum)
-8. [Tool query dữ liệu trong Data warehouse](#tool-query-du-lieu-trong-data-warehouse)
+8. [Tool query dữ liệu trong Data warehouse](#tool-query-dữ-liệu-trong-data-warehouse)
 9. [Liên hệ](#liên-hệ)
 
 ---
