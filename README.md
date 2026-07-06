@@ -20,7 +20,7 @@ Repository này giới thiệu giải pháp **Onprem**, phù hợp với nhóm k
    - [application.properties — Cấu hình pipeline](#applicationproperties--cấu-hình-pipeline)
 6. [Luồng hoạt động](#luồng-hoạt-động)
 7. [Ví dụ chi tiết: Pipeline Ethereum](#ví-dụ-chi-tiết-pipeline-ethereum)
-8. [Lấy schema 1 bảng bất ký trong Datawarehouse](#lấy-schema-1-bảng-bất-kỳ-trong-datawarehouse)
+8. [Tool query dữ liệu trong Data warehouse](#tool-query-du-lieu-trong-data-warehouse)
 9. [Liên hệ](#liên-hệ)
 
 ---
@@ -445,21 +445,19 @@ docker exec -u hadoop chainslake-onprem-node01-1 bash -c "export PS1='something'
 
 ---
 
-## Lấy schema 1 bảng bất kỳ trong Datawarehouse
+## Tool query dữ liệu trong Data warehouse
 
-Để sử dụng tính năng này bạn cần tạo METABASE_API_KEY từ trang: http://localhost:53000/admin/settings/authentication sau đó cho vào file `query/.env`
+Để sử dụng tool query dữ liệu trong Data warehouse hãy tham khảo tài liệu sau:
 
-```.env
-METABASE_API_KEY=<API key được tạo từ: http://localhost:53000/admin/settings/authentication>
-```
+📄 **[query/README.md](./query/README.md)**
 
-Để lấy schema bảng `ethereum.transactions`:
-
-```sh
-python query/get_example_table.py ethereum.transactions
-```
-
-Kết quả trả về schema (bao gồm tên column và type) cùng với 1 bản ghi làm ví dụ của bảng `ethereum.transactions`
+Hướng dẫn đó bao gồm:
+- Cài đặt thư viện
+- Cấu hình API Key
+- Danh sách các script và cách sử dụng:
+    - `get_example_table.py` — Lấy bản ghi mẫu từ bảng
+    - `query_table.py` — Thực thi câu truy vấn SQL
+    - `drop_table.py` — Xóa bảng
 
 ---
 
