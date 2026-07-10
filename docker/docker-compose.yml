@@ -88,6 +88,8 @@ services:
       MB_DB_PASS: ${POSTGRES_PASSWORD}
       MB_DB_HOST: postgres
       MB_JDBC_DATA_WAREHOUSE_UNRETURNED_CONNECTION_TIMEOUT_SECONDS: 86400
+    volumes:
+      - ./libs/starburst-metabase-driver.jar:/plugins/starburst-metabase-driver.jar
 
 networks:
   chainslake-onprem-network:

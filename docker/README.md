@@ -228,9 +228,26 @@ Sau khi tạo tài khoản, thêm kết nối đến data warehouse:
 | Username        | `hadoop`   |
 | Password        | `hadooppass` |
 
+### 6.2. Kết nối với Data Warehouse qua Trino
+
+Sau khi tạo tài khoản, thêm kết nối đến data warehouse:
+
+1. Vào **Settings** → **Admin** → **Databases** → **Add database**.
+2. Điền thông tin kết nối như sau:
+
+| Trường          | Giá trị    |
+|-----------------|------------|
+| Database type   | `Starburst` |
+| Display name    | `Trino`    |
+| Host            | `node01`   |
+| Port            | `8889`     |
+| Catalog         | `hive`     |
+| Username        | `metabase`   |
+| Password        | `metabasepass` |
+
 3. Nhấn **Save** để lưu kết nối.
 
-> **Lưu ý:** Spark Thrift Server (port 10000) có thể mất vài phút để sẵn sàng nhận kết nối sau khi khởi động. Nếu kết nối thất bại, hãy kiểm tra trạng thái service `spark-thriftserver` trên Supervisord (localhost:59001) và thử lại sau.
+> **Lưu ý:** Trino (port 8889) có thể mất vài phút để sẵn sàng nhận kết nối sau khi khởi động. Nếu kết nối thất bại, hãy kiểm tra trạng thái service `trino` trên Supervisord (localhost:59001) và thử lại sau.
 
 ---
 
