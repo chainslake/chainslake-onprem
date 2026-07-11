@@ -25,12 +25,11 @@ Nếu chưa có hoặc trống, cần chạy `python script/check_rpcs.py <chain
 python script/trigger_dag.py Ethereum
 ```
 
-Script tự động:
-1. Login Airflow qua CSRF form-based auth
-2. Cancel tất cả runs đang chạy/queued (tránh conflict)
-3. Unpause DAG
-4. Trigger manual run
-5. Poll status mỗi 30s cho đến khi success/failed
+Script chạy Airflow CLI bên trong container qua `docker exec`:
+1. Pause DAG để tránh conflict với runs đang chạy
+2. Unpause DAG
+3. Trigger manual run
+4. Poll status mỗi 30s cho đến khi success/failed
 
 **Tham số tuỳ chọn:**
 ```bash
@@ -40,14 +39,11 @@ python script/trigger_dag.py Ethereum --no-wait
 # Chỉ xem status
 python script/trigger_dag.py Ethereum --status
 
-# Cancel tất cả runs
+# Pause DAG và xem runs đang active
 python script/trigger_dag.py Ethereum --cancel-all
 
 # Custom poll interval
 python script/trigger_dag.py Ethereum --poll-interval 60
-
-# Custom password file
-python script/trigger_dag.py Ethereum --password-file /path/to/password
 ```
 
 ### Bước 3: Verify dữ liệu
@@ -82,18 +78,17 @@ decoded.erc20_evt_transfer → contract.erc20_tokens
 
 ## Lưu ý / Gotchas
 
-### Airflow login
-Airflow standalone dùng **CSRF form-based auth**, không phải REST API auth.
-- `GET /login/` → lấy CSRF token
-- `POST /login/` với `username`, `password`, `csrf_token`
-- Session cookie được sử dụng cho các request tiếp theo
+### Airflow CLI
+Script dùng `docker exec` gọi `airflow` CLI bên trong container `chainslake-onprem-node01-1`.
+- Container phải đang chạy (`docker ps | grep node01`)
+- User thực thi: `hadoop`
+- Không cần HTTP auth hay credentials — CLI dùng local auth tự động
 
-REST API auth (`POST /auth/fab/v1/login`) **không hoạt động** trên Airflow standalone.
-
-### Password file location
-Docker mount `chainslake/` vào `/home/hadoop/projects/chainslake/` trong container.
-Password file path từ host: `docker/home/projects/chainslake/airflow/standalone_admin_password.txt`
-Password file path từ container: `/home/hadoop/projects/chainslake/airflow/standalone_admin_password.txt`
+### Hạn chế: Cancel run
+Airflow CLI **không có lệnh trực tiếp** để cancel một DAG run.
+- `--cancel-all` sẽ **pause DAG** + báo cáo các runs đang active
+- Các task đang chạy sẽ tự hoàn thành, không thể force stop qua CLI
+- Nếu cần cancel thực sự, dùng Airflow UI trên port 58080
 
 ### RPC rate limiting
 Nếu chỉ có 1-2 RPCs, job origin có thể fail với lỗi:

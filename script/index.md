@@ -36,12 +36,11 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 ---
 
 ## trigger_dag.py
-- **Mục đích**: Trigger và theo dõi Airflow DAG run. Hỗ trợ cancel, check status, monitor tiến trình real-time.
-- **Config**: Đọc từ `script/.env` — `AIRFLOW_URL`, `AIRFLOW_USERNAME`. Password đọc từ file (mặc định: `chainslake/airflow/standalone_admin_password.txt`).
+- **Mục đích**: Trigger và theo dõi Airflow DAG run qua Airflow CLI (docker exec). Hỗ trợ check status, pause DAG.
+- **Config**: Không cần credentials — chạy CLI trực tiếp trong container `chainslake-onprem-node01-1`
 - **Input**:
   - Positional: `dag_id` — Tên DAG (ví dụ `Ethereum`)
-  - `--password-file` — Đường dẫn file chứa admin password
-  - `--cancel-all` — Cancel tất cả runs đang chạy/queued
+  - `--cancel-all` — Pause DAG và xem runs đang active
   - `--status` — Xem status các DAG runs gần nhất
   - `--no-wait` — Trigger rồi thoát ngay
   - `--poll-interval` — Thời gian poll (giây, mặc định 30)
