@@ -269,7 +269,9 @@ echo "# Skill Index\n\n_Chưa có skill nào._" > skill/index.md
 |---|---|
 | Xem schema bảng | `python query/get_example_table.py <table>` |
 | Query dữ liệu | `python query/query_table.py "<SQL>"` |
+| DDL (CREATE/ALTER/DROP) | `python query/ddl_spark.py "<SQL>"` |
 | Xóa bảng | `python query/drop_table.py <table>` |
+| Upload CSV lên DWH | Xem skill `upload-csv-to-dwh.md` |
 | Chạy job thủ công | `docker exec -u hadoop chainslake-onprem-node01-1 ...` |
 | Thêm pipeline chain mới | Xem skill `add-new-chain-pipeline.md` |
 | Thêm bảng token mới | Xem skill `add-new-token-table.md` |

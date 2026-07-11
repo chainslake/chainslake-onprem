@@ -110,14 +110,86 @@ Xác nhận không khớp. Hủy thao tác xóa bảng.
 
 ---
 
+### `check_table_properties.py` — Kiểm tra properties của bảng
+
+Hiển thị tblproperties của bảng trên Data Warehouse. Đặc biệt useful khi kiểm tra trạng thái lock và phạm vi dữ liệu.
+
+**Cú pháp:**
+```bash
+python check_table_properties.py <tên_bảng>
+```
+
+**Ví dụ:**
+```bash
+python check_table_properties.py ethereum.blocks
+```
+
+**Kết quả trả về:**
+```
+=== tblproperties của 'ethereum.blocks' ===
+
+Property                        Value
+--------------------------------------------------------------------------------
+isLock                          0
+frequenceType                   block
+fromBlock                       12345678
+toBlock                         12345999
+
+=== Property quan trọng ===
+
+  isLock (ĐÃ MỞ KHÓA): 0
+  frequenceType: block
+  fromBlock: 12345678
+  toBlock: 12345999
+```
+
+**Các property quan trọng:**
+| Property | Mô tả |
+|---|---|
+| `isLock` | Trạng thái khóa: 1 = bị khóa (job đang ghi), 0 = mở khóa |
+| `frequenceType` | Loại tần suất: `block`, `hour`, `minute`, `day` |
+| `fromBlock`, `toBlock` | Phạm vi block hiện có (nếu frequenceType=block) |
+| `fromEpochSecond`, `toEpochSecond` | Phạm vi epoch second hiện có (nếu frequenceType là minute/hour/day) |
+
+---
+
+### `unlock_table.py` — Mở khóa bảng
+
+Mở khóa bảng khi job bị lỗi "Table is Lock". Yêu cầu xác nhận trước khi thực hiện.
+
+**⚠️ Lưu ý:** Chỉ sử dụng khi chắc chắn không còn job nào đang ghi dữ liệu vào bảng.
+
+**Cú pháp:**
+```bash
+python unlock_table.py <tên_bảng>
+```
+
+**Ví dụ:**
+```bash
+python unlock_table.py ethereum.blocks
+```
+
+**Quy trình xác nhận:**
+```
+⚠️  Bạn sắp mở khóa bảng 'ethereum.blocks'.
+    Lệnh sẽ thực thi: ALTER TABLE ethereum.blocks SET TBLPROPERTIES (isLock=0)
+
+Nhập tên bảng để xác nhận: ethereum.blocks
+✅ Đã mở khóa bảng 'ethereum.blocks' thành công.
+```
+
+---
+
 ## Cấu trúc project
 
 ```
 query/
-├── .env                  # Biến môi trường (API key) — không commit lên git
-├── env_example           # File mẫu cấu hình .env
-├── metabase_query.py     # Module lõi gọi Metabase API
-├── get_example_table.py  # Lấy bản ghi mẫu từ bảng
-├── query_table.py        # Thực thi câu truy vấn SQL (read-only)
-└── drop_table.py         # Xóa bảng (có xác nhận)
+├── .env                      # Biến môi trường (API key) — không commit lên git
+├── env_example               # File mẫu cấu hình .env
+├── metabase_query.py         # Module lõi gọi Metabase API
+├── get_example_table.py      # Lấy bản ghi mẫu từ bảng
+├── query_table.py            # Thực thi câu truy vấn SQL (read-only)
+├── drop_table.py             # Xóa bảng (có xác nhận)
+├── check_table_properties.py # Kiểm tra tblproperties của bảng
+└── unlock_table.py           # Mở khóa bảng (set isLock=0)
 ```

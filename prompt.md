@@ -167,3 +167,64 @@
             ```
     - Các RPC sau khi pass check thì sẽ được đưa vào BNB_RPCS để job sử dụng
 
+=== 
+
+Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
+- Hãy cài đặt Chainslake data warehouse
+- hãy giúp tôi setup tài khoản admin cho Metabase luôn, 
+- Tiếp theo sau đó start workflow của Ethereum (chỉ chạy 1 lần)
+- Kiểm tra dữ liệu sau của các bảng sau khi chạy
+
+- Tôi tin rằng bạn đã có nhiều kinh nghiệm khi xử lý nhiệm vụ này, vì vậy hãy viết lại chúng thành script và skill để sử dụng về sau
+- Tôi nghĩ rằng mật khẩu và account login vào metabase không nên được hard trực tiếp vào trong script như vậy, hãy bỏ nó vào file .env, đừng quên cho vào .gitignore để không đẩy thông tin nhạy cảm lên git
+
+===
+
+Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
+- Tôi muốn bạn viết cho tôi một số tool query để hỗ trợ maintain cho datawarehouse như sau:
+    - tool kiểm tra properties của bảng:
+        - Cách thực hiện: gọi query sql sử dụng engine spark: "show tblproperties <tên bảng>"
+        - Kết quả sẽ cho biết các thuộc tính của bảng này, trong đó có các thuộc tính quan trọng sau:
+            - isLock: Cho biết bảng có đang bị khóa không (giá trị 1 hoặc 0), đảm bảo tại 1 thời điểm chỉ có 1 job được ghi data vào bảng, nếu 1 job ghi vào bảng đang log sẽ báo lỗi Table is Lock
+            - frequenceType: frequenceType của bảng, có thể nhận 1 trong các giá trị: block, hour, minute, day
+            - fromBlock, toBlock: Nếu frequenceType là block thì sẽ có 2 giá trị này, 
+                - cho biết bảng đang có data từ block nào đến block nào
+                - các giá trị này chỉ được update xuống nếu việc ghi thành công (đảm bảo dữ liệu chính xác cho downstream sử dụng)
+                - các job downstream sẽ dựa vào fromBlock và toBlock để tính toán giá trị from, to phù hợp khi chạy
+            - fromEpochSecond, toEpochSecond: tính năng tương tự như fromBlock, toBlock nhưng dùng cho các bảng có frequenceType là minute, hour, day. sử dụng đơn vị giây (Second) thay vì block
+    - tool mở khóa bảng:
+        - Cách thực hiện: gọi sql sử dụng engine spark: "alter table <tên bảng> set tblproperties (isLock=0)"
+        - Lưu ý:
+            - tool được sử dụng khi job ghi dữ liệu vào bảng bị lỗi, khi chạy lại báo lỗi Table is Lock (do bảng chưa được mở khóa ở lần chạy trước)
+            - chỉ sử dụng tool này khi biết chắc chắn không còn job nào đang ghi dữ liệu vào bảng
+
+===
+
+Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
+- Tôi cần upload file data/eth_etf_address.csv vào data warehouse, các bước làm như sau:
+    - Tạo 1 schema mới với tên là ext_upload (nếu chưa có) sử dụng query engine spark:
+        SQL: `create schema ext_upload`
+    - Copy file vào node01 sau đó sử dụng hdfs put (bên trong docker node01) để đẩy nó lên hdfs
+        script: `hdfs dfs -put eth_etf_address.csv /user/hive/warehouse/ext_upload.db/eth_etf_address/`
+    - Tạo table, sử dung SQL với engine spark:
+       ```sql
+       CREATE EXTERNAL TABLE ext_upload.eth_etf_address (
+            issuer STRING,
+            address STRING,
+            etf_ticker STRING,
+            track_inflow STRING,
+            track_outflow STRING,
+            inverse_values STRING
+        )
+        ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+        WITH SERDEPROPERTIES (
+            "separatorChar" = ",",
+            "quoteChar"     = "\""
+        )
+        STORED AS TEXTFILE
+        LOCATION 'hdfs:///user/hive/warehouse/ext_upload.db/eth_etf_address/';
+       ``` 
+    - query thử bảng xem đã được chưa
+- Sau khi xong thì viết lại skill, script để tái sử dụng
+- vì thư mục chainslake đã được mount vào trong node01 rồi, nên có thể bỏ qua bước copy vào node01
+- thay vào đó hãy tạo 1 thư mục mới là ext_upload trong thư mục chainslake, để người dùng bỏ file họ muốn upload lên vào đó

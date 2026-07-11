@@ -1,0 +1,3 @@
+issuer,address,etf_ticker,track_inflow,track_outflow,inverse_values
+Franklin Templeton,0x21818666ea7218fa2579146ccffb05c113fcd132,EZET,true,true,false
+Franklin Templeton,0xf892c7b77d50b8ed19a33fd28e24151600478731,EZET,true,true,false
