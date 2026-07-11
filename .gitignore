@@ -1,0 +1,18 @@
+# Environment files (credentials)
+.env
+query/.env
+script/.env
+
+# Docker data
+docker/home/
+docker/hadoop_data_node01/
+docker/hadoop_data_node02/
+docker/postgres_data/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/

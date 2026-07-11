@@ -91,7 +91,7 @@ def check_rpc(url: str, timeout: int) -> tuple:
         required_block_fields = [
             "number", "hash", "parentHash", "nonce", "sha3Uncles",
             "logsBloom", "transactionsRoot", "stateRoot", "miner",
-            "difficulty", "totalDifficulty", "extraData", "size",
+            "difficulty", "extraData", "size",
             "gasLimit", "gasUsed", "timestamp", "transactions"
         ]
         ok, missing = has_fields(block, required_block_fields)

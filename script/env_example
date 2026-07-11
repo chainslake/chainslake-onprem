@@ -1,0 +1,9 @@
+# Metabase credentials
+METABASE_URL=http://localhost:53000
+METABASE_EMAIL=admin@chainslake.com
+METABASE_PASSWORD=your_password_here
+METABASE_SITE_NAME=Chainslake Warehouse
+
+# Airflow credentials
+AIRFLOW_URL=http://localhost:58080
+AIRFLOW_USERNAME=admin
