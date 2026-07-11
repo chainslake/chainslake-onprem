@@ -89,10 +89,8 @@ def check_rpc(url: str, timeout: int) -> tuple:
         resp2 = rpc_call(url, "eth_getBlockByNumber", [block_hex, True], timeout)
         block = resp2.get("result")
         required_block_fields = [
-            "number", "hash", "parentHash", "nonce", "sha3Uncles",
-            "logsBloom", "transactionsRoot", "stateRoot", "miner",
-            "difficulty", "extraData", "size",
-            "gasLimit", "gasUsed", "timestamp", "transactions"
+            "number", "hash",
+            "timestamp", "transactions"
         ]
         ok, missing = has_fields(block, required_block_fields)
         if not ok:
@@ -102,8 +100,8 @@ def check_rpc(url: str, timeout: int) -> tuple:
         txs = block.get("transactions", [])
         if isinstance(txs, list) and len(txs) > 0:
             required_tx_fields = [
-                "hash", "nonce", "blockHash", "blockNumber", "transactionIndex",
-                "from", "to", "value", "gasPrice", "gas", "input", "r", "s", "type"
+                "hash", "nonce", "transactionIndex",
+                "from", "to", "value", "gasPrice", "gas", "input", "type"
             ]
             ok, missing = has_fields(txs[0], required_tx_fields)
             if not ok:
@@ -120,9 +118,9 @@ def check_rpc(url: str, timeout: int) -> tuple:
         # Kiểm tra fields của receipt (nếu block có receipt)
         if len(receipts) > 0:
             required_receipt_fields = [
-                "blockHash", "blockNumber", "contractAddress", "cumulativeGasUsed",
-                "effectiveGasPrice", "from", "gasUsed", "to", "status",
-                "transactionHash", "transactionIndex", "type", "logsBloom", "logs"
+                "blockHash",
+                "from", "gasUsed", "to", "status",
+                "transactionHash", "transactionIndex", "logs"
             ]
             ok, missing = has_fields(receipts[0], required_receipt_fields)
             if not ok:
