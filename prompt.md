@@ -228,3 +228,14 @@
 - Sau khi xong thì viết lại skill, script để tái sử dụng
 - vì thư mục chainslake đã được mount vào trong node01 rồi, nên có thể bỏ qua bước copy vào node01
 - thay vào đó hãy tạo 1 thư mục mới là ext_upload trong thư mục chainslake, để người dùng bỏ file họ muốn upload lên vào đó
+
+===
+
+- Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
+- Hiện tại tôi đang thấy rằng các script và skill để làm tương tác với airflow đang được thực hiện thông qua call HTTP request, tôi nghĩ rằng đây không phải là cách tối ưu dành cho agent, tôi muốn bạn review và sửa lại để sử dụng Airflow CLI
+
+===
+
+- Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
+- Tôi muốn thực hiện việc nâng cấp metabase lên phiên bản mới nhất, để Agent có thể sử dụng metabase cli, bạn có thể xóa database metabase cũ trong postgres và tạo lại database mới và set up lại từ đầu sử dụng metabase cli
+- update lại skill và script sử dụng metabase cli

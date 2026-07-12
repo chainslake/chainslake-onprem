@@ -23,15 +23,17 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 ---
 
 ## setup_metabase.py
-- **Mục đích**: Thiết lập Metabase on-premise từ đầu: tạo admin account, tạo API key, thêm SparkSQL/Trino database connections.
+- **Mục đích**: Thiết lập Metabase on-premise từ đầu: tạo admin account, tạo API key, thêm SparkSQL/Trino database connections, authenticate Metabase CLI (`mb`).
 - **Config**: Đọc từ `script/.env` — `METABASE_URL`, `METABASE_EMAIL`, `METABASE_PASSWORD`, `METABASE_SITE_NAME`
 - **Input**:
   - `--skip-databases` — Bỏ qua bước thêm database
+  - `--skip-cli` — Bỏ qua bước setup Metabase CLI
   - `--api-key-file` — Đường dẫn ghi file `.env` chứa API key (mặc định: `query/.env`)
-- **Output**: Admin account, API key trong `query/.env`, database connections
+- **Output**: Admin account, API key trong `query/.env`, database connections, CLI authenticated
 - **Ví dụ**:
   - `python script/setup_metabase.py`
   - `python script/setup_metabase.py --skip-databases`
+  - `python script/setup_metabase.py --skip-cli`
 
 ---
 

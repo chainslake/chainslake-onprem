@@ -1,14 +1,16 @@
 """
-Setup Metabase on-premise: tạo admin account, kết nối SparkSQL và Trino.
+Setup Metabase on-premise: tạo admin account, kết nối SparkSQL và Trino,
+authenticate Metabase CLI.
 
 Đọc credentials từ script/.env (xem script/env_example).
 
 Usage:
-    python script/setup_metabase.py [--skip-databases]
+    python script/setup_metabase.py [--skip-databases] [--skip-cli]
 """
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 
@@ -20,7 +22,7 @@ load_dotenv("script/.env")
 
 def wait_for_metabase(base_url, timeout=120):
     """Đợi Metabase sẵn sàng."""
-    print("[1/4] Waiting for Metabase to be ready...")
+    print("[1/5] Waiting for Metabase to be ready...")
     start = time.time()
     while time.time() - start < timeout:
         try:
@@ -45,7 +47,7 @@ def check_already_setup(base_url):
 
 def setup_admin(base_url, email, password, site_name):
     """Tạo admin account qua /api/setup."""
-    print("[2/4] Setting up admin account...")
+    print("[2/5] Setting up admin account...")
 
     props = requests.get(f"{base_url}/api/session/properties", timeout=10).json()
     token = props.get("setup-token")
@@ -80,7 +82,7 @@ def setup_admin(base_url, email, password, site_name):
 
 def login(base_url, email, password):
     """Login và trả về session token."""
-    print("[2/4] Logging in...")
+    print("[2/5] Logging in...")
     r = requests.post(
         f"{base_url}/api/session",
         json={"username": email, "password": password},
@@ -97,7 +99,7 @@ def login(base_url, email, password):
 
 def create_api_key(base_url, session_id, key_name="chainslake-agent"):
     """Tạo API key cho automation."""
-    print("[3/4] Creating API key...")
+    print("[3/5] Creating API key...")
     headers = {"Content-Type": "application/json", "X-Metabase-Session": session_id}
     r = requests.post(
         f"{base_url}/api/api-key",
@@ -135,7 +137,7 @@ def add_database(base_url, session_id, engine, name, details):
 
 def add_databases(base_url, session_id):
     """Thêm SparkSQL và Trino."""
-    print("[4/4] Adding database connections...")
+    print("[4/5] Adding database connections...")
 
     add_database(base_url, session_id, "sparksql", "Spark", {
         "host": "node01",
@@ -154,9 +156,59 @@ def add_databases(base_url, session_id):
     })
 
 
+def setup_cli(base_url, api_key):
+    """Authenticate Metabase CLI (`mb`) với API key."""
+    print("[5/5] Setting up Metabase CLI...")
+
+    # Kiểm tra mb có cài không
+    try:
+        result = subprocess.run(
+            ["mb", "--version"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            print("  WARNING: Metabase CLI (`mb`) not found or not working")
+            print("  Install: npm install -g @metabase/cli")
+            return False
+        print(f"  Metabase CLI version: {result.stdout.strip()}")
+    except FileNotFoundError:
+        print("  WARNING: Metabase CLI (`mb`) not installed")
+        print("  Install: npm install -g @metabase/cli")
+        return False
+    except subprocess.TimeoutExpired:
+        print("  WARNING: `mb --version` timed out")
+        return False
+
+    # Authenticate
+    try:
+        result = subprocess.run(
+            ["mb", "auth", "login", "--url", base_url, "--api-key", api_key],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode == 0:
+            import json
+            status = json.loads(result.stdout)
+            if status.get("authenticated"):
+                print(f"  CLI authenticated! User: {status.get('user', {}).get('name', '?')}")
+                return True
+            else:
+                print(f"  WARNING: CLI auth returned: {result.stdout[:200]}")
+                return False
+        else:
+            print(f"  WARNING: CLI auth failed: {result.stderr[:200]}")
+            return False
+    except json.JSONDecodeError:
+        print(f"  WARNING: Could not parse CLI output: {result.stdout[:200]}")
+        return False
+    except Exception as e:
+        print(f"  WARNING: CLI setup error: {e}")
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Setup Metabase on-premise")
     parser.add_argument("--skip-databases", action="store_true", help="Skip adding databases")
+    parser.add_argument("--skip-cli", action="store_true", help="Skip Metabase CLI setup")
     parser.add_argument("--api-key-file", default="query/.env", help="Path to write API key .env")
     args = parser.parse_args()
 
@@ -177,7 +229,7 @@ def main():
     # Step 2: Setup or Login
     session_id = None
     if check_already_setup(base_url):
-        print("[2/4] Already set up, logging in...")
+        print("[2/5] Already set up, logging in...")
         session_id = login(base_url, email, password)
     else:
         session_id = setup_admin(base_url, email, password, site_name)
@@ -200,9 +252,15 @@ def main():
     if not args.skip_databases:
         add_databases(base_url, session_id)
 
+    # Step 5: CLI setup
+    if not args.skip_cli and api_key:
+        setup_cli(base_url, api_key)
+
     print("\nSetup complete!")
     print(f"  URL:      {base_url}")
     print(f"  Email:    {email}")
+    if api_key:
+        print(f"  API Key:  {api_key[:15]}...")
 
 
 if __name__ == "__main__":
