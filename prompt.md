@@ -237,5 +237,6 @@
 ===
 
 - Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
+- Thực hiện setup metabase
 - Tôi muốn thực hiện việc nâng cấp metabase lên phiên bản mới nhất, để Agent có thể sử dụng metabase cli, bạn có thể xóa database metabase cũ trong postgres và tạo lại database mới và set up lại từ đầu sử dụng metabase cli
 - update lại skill và script sử dụng metabase cli

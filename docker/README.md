@@ -195,59 +195,52 @@ docker exec chainslake-onprem-node01-1 cat /home/hadoop/projects/chainslake/airf
 
 ---
 
-## Bước 6: Kiểm tra và cấu hình Metabase (localhost:53000)
+## Bước 6: Thiết lập Metabase (localhost:53000)
 
-**Metabase** là công cụ BI để query dữ liệu và tạo biểu đồ trực quan. Truy cập:
+**Metabase** là công cụ BI để query dữ liệu và tạo biểu đồ trực quan. Sau khi tất cả container đã khởi động xong, chạy script setup tự động từ thư mục gốc dự án:
 
+### 6.1. Chuẩn bị credentials
+
+```bash
+cp script/env_example script/.env
 ```
-http://localhost:53000
+
+Chỉnh sửa `script/.env` với thông tin thực tế:
+
+```env
+METABASE_URL=http://localhost:53000
+METABASE_EMAIL=admin@chainslake.com
+METABASE_PASSWORD=<your_password_here>
+METABASE_SITE_NAME=Chainslake Warehouse
 ```
 
-### 6.1. Tạo tài khoản admin
+### 6.2. Chạy script setup
 
-Lần đầu truy cập, Metabase sẽ yêu cầu thiết lập tài khoản admin:
+```bash
+python script/setup_metabase.py
+```
 
-1. Chọn ngôn ngữ và múi giờ.
-2. Điền thông tin tài khoản admin (email, mật khẩu) theo ý muốn.
-3. Hoàn tất các bước thiết lập ban đầu.
+Script tự động thực hiện:
+1. Đợi Metabase sẵn sàng
+2. Tạo admin account
+3. Tạo API key và ghi vào `query/.env`
+4. Thêm kết nối SparkSQL và Trino
+5. Authenticate Metabase CLI (`mb`)
 
-### 6.2. Kết nối với Data Warehouse qua SparkSQL
+**Tham số tuỳ chọn:**
 
-Sau khi tạo tài khoản, thêm kết nối đến data warehouse:
+```bash
+python script/setup_metabase.py --skip-databases    # Bỏ qua thêm database
+python script/setup_metabase.py --skip-cli          # Bypass CLI auth
+```
 
-1. Vào **Settings** → **Admin** → **Databases** → **Add database**.
-2. Điền thông tin kết nối như sau:
+### 6.3. Kiểm tra kết quả
 
-| Trường          | Giá trị    |
-|-----------------|------------|
-| Database type   | `SparkSQL` |
-| Display name    | `Spark`    |
-| Host            | `node01`   |
-| Port            | `10000`    |
-| Database name   | `default`  |
-| Username        | `hadoop`   |
-| Password        | `hadooppass` |
+- Truy cập `http://localhost:53000` — login bằng admin credentials
+- Vào **Settings** → **Admin** → **Databases** — kiểm tra Spark và Trino đã được thêm
+- File `query/.env` đã có `METABASE_API_KEY=...`
 
-### 6.2. Kết nối với Data Warehouse qua Trino
-
-Sau khi tạo tài khoản, thêm kết nối đến data warehouse:
-
-1. Vào **Settings** → **Admin** → **Databases** → **Add database**.
-2. Điền thông tin kết nối như sau:
-
-| Trường          | Giá trị    |
-|-----------------|------------|
-| Database type   | `Starburst` |
-| Display name    | `Trino`    |
-| Host            | `node01`   |
-| Port            | `8889`     |
-| Catalog         | `hive`     |
-| Username        | `metabase`   |
-| Password        | `metabasepass` |
-
-3. Nhấn **Save** để lưu kết nối.
-
-> **Lưu ý:** Trino (port 8889) có thể mất vài phút để sẵn sàng nhận kết nối sau khi khởi động. Nếu kết nối thất bại, hãy kiểm tra trạng thái service `trino` trên Supervisord (localhost:59001) và thử lại sau.
+> **Lưu ý:** Chi tiết từng bước và các lỗi thường gặp xem tại `skill/setup-metabase.md`.
 
 ---
 
