@@ -17,13 +17,14 @@ with DAG(
         "retries": 2
     },
     description="Ethereum pipeline",
-    start_date=datetime(2025, 10, 11, 0),
+    start_date=datetime(2015, 7, 30, 0),
     # schedule="@continuous",
     schedule="10 0 * * *",
     # schedule="@once",
     max_active_runs=1,
     max_active_tasks=10,
     is_paused_upon_creation=True,
+    catchup=False,
 ) as dag:
 
     ########################### ORIGIN ##########################################

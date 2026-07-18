@@ -19,6 +19,7 @@ Agent quản lý toàn bộ các thư mục sau trong dự án:
 chainslake-onprem/
 ├── chainslake-run/         # Cấu hình và thực thi Spark job
 ├── chainslake/             # Source code pipeline (jobs, sql, abi, airflow dags)
+├── catalog/                # [OUTPUT] Tài liệu catalog data warehouse (sinh ra bởi script)
 ├── docker/                 # Cấu hình Docker Compose và hạ tầng
 ├── query/                  # Script Python tương tác Data Warehouse
 ├── script/                 # [AGENT-MANAGED] Script Python do Agent tự viết
@@ -276,3 +277,4 @@ echo "# Skill Index\n\n_Chưa có skill nào._" > skill/index.md
 | Thêm pipeline chain mới | Xem skill `add-new-chain-pipeline.md` |
 | Thêm bảng token mới | Xem skill `add-new-token-table.md` |
 | Decode contract mới | Xem skill `add-contract-decode-job.md` |
+| Build catalog warehouse | `python script/build_catalog.py` |

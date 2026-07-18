@@ -240,3 +240,90 @@
 - Thực hiện setup metabase
 - Tôi muốn thực hiện việc nâng cấp metabase lên phiên bản mới nhất, để Agent có thể sử dụng metabase cli, bạn có thể xóa database metabase cũ trong postgres và tạo lại database mới và set up lại từ đầu sử dụng metabase cli
 - update lại skill và script sử dụng metabase cli
+
+=== 
+
+- Tôi muốn bạn viết một skill mới để thực hiện việc cấu hình các tham số cho job hoặc pipeline
+- Đây là một nhiệm vụ khó, tuy nhiên rất quan trọng nên bạn cần hiểu rõ và viết lại rõ ràng.
+- Nhắc lại về một số tham số cấu hình quan trọng của job:
+    - number_block_per_partition: số block cho mỗi partition
+    - max_number_partition: Số partition được xử lý trong mỗi vòng lặp
+    - max_time_run: Số vòng lặp trong 1 lần chạy job
+- Các tham số này có thể được cấu hình trong file application.properties, hoặc cấu hình trực tiếp trong file .sh của job thông qua config, ví dụ: --conf "spark.app_properties.max_number_partition=24", nếu có cả ở 2 nơi thì job sẽ ưu tiên sử dụng giá trị trong file .sh
+- Cách chọn tham số:
+    - number_block_per_partition:
+        - sẽ được chọn riêng cho mỗi chain sao cho mỗi partition sẽ có lượng data khoảng 1 giờ dữ liệu (cần lấy nhiều hơn 1 chút). Có thể tính toán con số này dựa vào các thông tin lấy được từ Internet, tuy nhiên sau đó cần tính toán lại dựa trên block_number và block_time bằng cách count số block trong 1 giờ từ bảng transaction_blocks (lưu ý cần đảm bảo có đủ data trong 1 giờ)
+        - Cách tốt nhất là khi setup mới 1 chain, hãy lấy giá trị number_block_per_partition theo thông tin từ Internet, sau đó set max_number_partition và max_time_run rồi chạy job 1 đến 2 lần, sau đó thực hiện tính toán lại số number_block_per_partition cho chính xác (nhớ là cần lấy nhiều hơn 1 chút lý tưởng là 5%, vì số block mỗi giờ của chain thường không cố định).
+    - max_number_partition:
+        - tham số này cho biết có bao nhiêu partitions được xử lý trong 1 vòng lặp, con số này cần được điều chỉnh để phù hợp với lượng tài nguyên (số thread và lượng memory cung cấp) được cung cấp cho job đó
+        - Tài nguyên sẽ được cấp phát dựa vào 2 tham số sau đây của job:
+            --master local[2] \ số threads càn nhiều thì sẽ càng có nhiều partitions được xử lý đồng thời
+            --driver-memory 4g \ memory cung cấp cần phải nhiều hơn dung lượng data đọc (nếu có) + dung lượng data ghi của job
+        - Để tính được memory cần dùng cho job, bạn cần tính xem 1 partition dữ liệu trên bảng có dung lượng bao nhiêu, bằng cách sử dụng câu SQL sau:
+            `describe detail <tên bảng>` Sau đó tìm sizeInBytes để biết kích thước thực tế của bảng
+        - Lưu ý quan trọng: Đối với các job sử dụng frequent_type là day thì max_number_partition phải >= 24 
+    - max_time_run: cho biết số vòng lặp trong 1 lần chạy dữ liệu, hợp lý nhất là chọn sao cho 1 lần chạy xử lý được 1 ngày dữ liệu
+- Cấu hình DAG
+    - start_date: hãy đặt bằng ngày bắt đầu của chain, ví dụ với Ethereum là ngày 30/07/2015
+    - is_paused_upon_creation=True: Để DAG luôn off khi khởi động
+    - catchup=False: Để DAG sẽ ko tự động chạy các ngày history
+- Lưu ý: Nếu người dùng yêu cầu có data từ 
+- Mặc định chúng ta sẽ cấu hình run_mode của cả pipeline là backward, tức là chạy ngược từ hiện tại về quá khứ, sau khi đã đủ dữ liệu đến ngày người dùng cần thì cần chuyển lại cấu hình này về forward. Tuy nhiên thay vì chuyển run_mode thành forward cho tất cả các job trên pipeline thì bạn chỉ cần thay đổi cấu hình này tại job đầu tiên trong pipeline tức là job _origin.transaction_blocks vì khi job này đã bị dừng chạy ngược, các job phía sau dù có backward cũng không thể chạy tiếp về quá khứ được nữa (vì ko có data). Lưu ý rằng cấu hình backward sẽ cho phép job chạy cả tiến và lùi, trong khi forward chỉ cho phép chạy tiến.
+- Khi thêm 1 job mới vào DAG, giả sử lúc này DAG đã hoàn thành chạy dữ liệu về quá khứ, như vậy job mới thêm vào phải tự chạy về quá khứ, bạn hãy sử dụng Airflow CLI để chạy backfill cho riêng job mới này.
+    
+===
+
+Hãy viết cho tôi phần hướng dẫn cài đặt thành 1 skill, để Agent không cần đọc file docker/README.md nữa (vì đây là doc dành cho người dùng)
+
+===
+
+Hãy config giúp tôi để mỗi lần mở opencode lên thì toàn bộ log OPENCODE_LOG_LEVEL=TRACE sẽ được ghi ra file opencode.log của thư mục này 
+
+===
+
+- Tôi muốn chỉnh sửa lại skill Configure Job/Pipeline Parameters như sau:
+    - tại bước 4: Cấu hình `start_date` trên DAG
+        - Cấu hình start_date mặc định là thời điểm 2 năm kể từ ngày hiện tại
+        - phải bổ sung thêm cấu hình catchup=False để DAG không tự động chạy lại từ ngày start_date, vì đã có bước 6 để chạy backfill rồi
+
+=== 
+
+Tôi muốn bạn bổ sung thêm mục Use case trong AGENT_INSTRUCTION.md, để hướng dẫn nhanh cho Agent biết cần gọi các skill nào trong các tình huống sử dụng cụ thể, Use case cũng sẽ được Agent tự động update trong quá trình sử dụng. Sau đây là 1 số Use case:
+    - Bắt đầu:
+        - Kiểm tra xem hệ thống đã được cài đặt hay chưa? nếu chưa thì hỏi người dùng xem có muốn cài đặt ngay không
+        - Nếu đã cài đặt rồi thì kiểm tra xem hệ thống đã được bật lên chưa, toàn bộ service đã hoạt động đầy đủ chưa, nếu chưa thì hỏi người dùng có muốn bật hệ thống lên không
+    - Cài đặt hệ thống:
+        - Sử dụng skill: Cài đặt Chainslake On-Premises
+        - Sau khi cài đặt và khởi động xong thì cho người dùng biết đang có những chain nào đang có sẵn
+        - Hỏi người dùng xem họ muốn chạy chain nào hoặc muốn setup một chain mới hay không
+    - Setup một chain mới:
+        - Sử dụng skill: Add New Chain Pipeline (cần hỏi người dùng xem họ muốn setup chain nào)
+        - Sử dụng skill: Configure Job/Pipeline Parameters 
+            - Xác định các tham số cấu hình cần thiết cho chain mới
+
+===
+
+- Tôi cần bạn viết một script mới để lấy thông tin hiện trạng về các bảng dữ liệu đang có trong warehouse để cho vào thư mục catalog của dự án này
+- Các bước làm như sau:
+    - Lấy danh sách tất cả các bảng trong warehouse
+        - vì không có câu lệnh SQL nào có thể lấy được hết tất cả bảng nên script cần thực thi 2 câu truy vấn sau
+            - `show schemas`: Lấy danh sách tất cả schema trong warehouse (cần bỏ qua schema default)
+            - `show tables in [schema_name]`: Lấy danh sách tất cả table trong schema
+    - Với mỗi table script cần lấy các thông tin sau:
+        - schema của bảng (danh sách column và type) và ví dụ dữ liệu, hãy sử dụng script có sẵn
+        - thông tin thuộc tính của bảng, sử dụng script có sẵn
+            - Các thuộc tính cần lấy bao gồm:   
+                - frequentType
+                - fromBlock
+                - toBlock
+                - fromEpochSecond
+                - toEpochSecond
+                - listInputTables: cho biết danh sách bảng upstream của bảng này
+                - sqlSource: SQL transform của bảng (nếu có)
+                - abi: ABI sử dụng trong bảng (nếu có)
+        - Các thông tin sizing của bảng
+            - số lượng bản ghi hiện tại: sử dụng `select count(*) from [table_name]` để đếm số bản ghi
+            - ngày tạo, ngày update, dung lượng (sizeInBytes), số file: Sử dụng `describe detail [table_name]` để lấy
+    - Tổng hợp thông tin của mỗi bảng thành 1 tài liệu với tên file là [schema].[table_name].md sử dụng mẫu tại table_template.md
+    - Tổng hợp tất cả thông tin về upstream và downstream của tất cả các bảng để tạo 1 tài liệu với tên là lineage.md (cũng đặt trong thư mục catalog) trong tài liệu này thể hiện sự phụ thuộc (lineage) của tất cả các bảng dưới dạng graph trực quan 
+            

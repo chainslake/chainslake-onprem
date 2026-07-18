@@ -16,4 +16,6 @@ exec spark-submit --name SparkThriftServer --class org.apache.spark.sql.hive.thr
     --conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension" \
     --conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" \
     --conf spark.databricks.delta.retentionDurationCheck.enabled=false \
-    --conf spark.databricks.delta.metadataColumn.enabled=true
+    --conf spark.databricks.delta.metadataColumn.enabled=true \
+    --conf spark.redaction.regex="^$" \
+    --conf spark.sql.redaction.options.regex="^$"

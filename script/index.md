@@ -53,4 +53,19 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
   - `python script/trigger_dag.py Ethereum --status`
   - `python script/trigger_dag.py Ethereum --cancel-all`
 
+---
+
+## build_catalog.py
+- **Mục đích**: Thu thập metadata từ tất cả bảng trong data warehouse và tạo tài liệu catalog markdown (per-table + lineage graph)
+- **Config**: Đọc `METABASE_API_KEY` và `METABASE_URL` từ `query/.env`
+- **Input**:
+  - `--output-dir` — Thư mục output (mặc định: `catalog/`)
+  - `--skip-count` — Bỏ qua đếm số rows (chạy nhanh hơn)
+  - `--skip-example` — Bỏ qua lấy ví dụ dữ liệu
+- **Output**: Thư mục `catalog/` chứa file `[schema].[table].md` cho mỗi bảng + `lineage.md` với Mermaid graph
+- **Ví dụ**:
+  - `python script/build_catalog.py`
+  - `python script/build_catalog.py --skip-count`
+  - `python script/build_catalog.py --output-dir /tmp/catalog`
+
 

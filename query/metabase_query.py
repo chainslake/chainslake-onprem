@@ -35,16 +35,11 @@ def exe_query(sql, engine='spark'):
         raise RuntimeError("METABASE_API_KEY not set in query/.env")
 
     body = {
-        "lib/type": "mbql/query",
         "database": database_id,
-        "stages": [
-            {
-                "native": sql,
-                "lib/type": "mbql.stage/native",
-                "template-tags": {}
-            }
-        ],
-        "parameters": []
+        "type": "native",
+        "native": {
+            "query": sql
+        }
     }
     header = {
         'X-API-KEY': api_key
