@@ -22,15 +22,29 @@
 
 ## Schema
 
-| Column | Type | Example |
-|---|---|---|
-| contract_address | string | `0xc71c923445abdfc2c9b50292d8498745330f18ab` |
-| updated_time | timestamp | `2026-07-13T00:16:28.291Z` |
-| name | string | `SY YieldFi vyUSD` |
-| symbol | string | `SY-vyUSD` |
-| decimals | int | `18` |
+| Column | Type | Index | Partition | Example |
+|---|---|---|---|---|
+| contract_address | string | 1 |  | `0xc71c923445abdfc2c9b50292d8498745330f18ab` |
+| updated_time | timestamp |  |  | `2026-07-13T00:16:28.291Z` |
+| name | string |  |  | `SY YieldFi vyUSD` |
+| symbol | string |  |  | `SY-vyUSD` |
+| decimals | int |  |  | `18` |
 
 ## SQL Transform
+
+### Header
+
+| Key | Value |
+|---|---|
+| frequent_type | `block` |
+| list_input_tables | `ethereum_decoded.erc20_evt_transfer` |
+| register_evm_call | `erc20` |
+| max_num_files | `200` |
+| output_table | `ethereum_contract.erc20_tokens` |
+| write_mode | `Append` |
+| number_index_columns | `1` |
+
+### SQL Body
 
 ```sql
 

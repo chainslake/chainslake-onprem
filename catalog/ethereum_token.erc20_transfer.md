@@ -22,25 +22,42 @@
 
 ## Schema
 
-| Column | Type | Example |
-|---|---|---|
-| block_date | date | `2026-07-12T00:00:00Z` |
-| block_number | bigint | `25517218` |
-| block_time | timestamp | `2026-07-12T14:44:23Z` |
-| updated_time | timestamp | `2026-07-12T15:49:46.398Z` |
-| contract_address | string | `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
-| symbol | string | `USDC` |
-| decimals | int | `6` |
-| tx_hash | string | `0x02bd3e963637b1d42adc792b006c8bae68a1d3c921511e390547afa962fbdf84` |
-| evt_index | int | `0` |
-| from | string | `0x98908f7d33e88479e4e6d1c1e6eb8997a2bdb94c` |
-| to | string | `0x6cdb7776f6a20b9ed4441b791e9541a6fc04e313` |
-| value | double | `2903.2391629999997` |
-| tx_from | string | `0x98908f7d33e88479e4e6d1c1e6eb8997a2bdb94c` |
-| tx_to | string | `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
-| tx_method_id | string | `0xa9059cbb` |
+| Column | Type | Index | Partition | Example |
+|---|---|---|---|---|
+| block_date | date | 1 | x | `2026-07-12T00:00:00Z` |
+| block_number | bigint | 2 |  | `25517218` |
+| block_time | timestamp | 3 |  | `2026-07-12T14:44:23Z` |
+| updated_time | timestamp |  |  | `2026-07-12T15:49:46.398Z` |
+| contract_address | string |  |  | `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
+| symbol | string |  |  | `USDC` |
+| decimals | int |  |  | `6` |
+| tx_hash | string |  |  | `0x02bd3e963637b1d42adc792b006c8bae68a1d3c921511e390547afa962fbdf84` |
+| evt_index | int |  |  | `0` |
+| from | string |  |  | `0x98908f7d33e88479e4e6d1c1e6eb8997a2bdb94c` |
+| to | string |  |  | `0x6cdb7776f6a20b9ed4441b791e9541a6fc04e313` |
+| value | double |  |  | `2903.2391629999997` |
+| tx_from | string |  |  | `0x98908f7d33e88479e4e6d1c1e6eb8997a2bdb94c` |
+| tx_to | string |  |  | `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
+| tx_method_id | string |  |  | `0xa9059cbb` |
 
 ## SQL Transform
+
+### Header
+
+| Key | Value |
+|---|---|
+| frequent_type | `block` |
+| list_input_tables | `ethereum.transactions,ethereum_decoded.erc20_evt_transfer,ethereum_contract.erc20_tokens` |
+| transactions | `ethereum.transactions` |
+| erc20_evt_transfer | `ethereum_decoded.erc20_evt_transfer` |
+| erc20_tokens | `ethereum_contract.erc20_tokens` |
+| output_table | `ethereum_token.erc20_transfer` |
+| re_partition_by_range | `block_date,block_number` |
+| partition_by | `block_date` |
+| write_mode | `Append` |
+| number_index_columns | `3` |
+
+### SQL Body
 
 ```sql
 

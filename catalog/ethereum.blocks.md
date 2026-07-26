@@ -22,15 +22,31 @@
 
 ## Schema
 
-| Column | Type | Example |
-|---|---|---|
-| block_date | date | `2026-07-12T00:00:00Z` |
-| block_number | bigint | `25517791` |
-| block_time | timestamp | `2026-07-12T16:39:35Z` |
-| number_tx | int | `99` |
-| number_logs | int | `256` |
+| Column | Type | Index | Partition | Example |
+|---|---|---|---|---|
+| block_date | date | 1 | x | `2026-07-12T00:00:00Z` |
+| block_number | bigint | 2 |  | `25517791` |
+| block_time | timestamp | 3 |  | `2026-07-12T16:39:35Z` |
+| number_tx | int |  |  | `99` |
+| number_logs | int |  |  | `256` |
 
 ## SQL Transform
+
+### Header
+
+| Key | Value |
+|---|---|
+| frequent_type | `block` |
+| list_input_tables | `ethereum_origin.transaction_blocks,ethereum_origin.blocks_receipt` |
+| transaction_blocks | `ethereum_origin.transaction_blocks` |
+| blocks_receipt | `ethereum_origin.blocks_receipt` |
+| output_table | `ethereum.blocks` |
+| re_partition_by_range | `block_date,block_number` |
+| partition_by | `block_date` |
+| write_mode | `Append` |
+| number_index_columns | `3` |
+
+### SQL Body
 
 ```sql
 

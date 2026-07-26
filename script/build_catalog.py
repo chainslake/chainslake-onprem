@@ -130,7 +130,7 @@ def format_datetime(dt_str):
         return str(dt_str)
 
 
-def build_schema_example_table(columns, example_data):
+def build_schema_example_table(columns, example_data, num_indexed_cols=None, partition_columns=None):
     if not columns:
         return '_Không có thông tin schema_'
 
@@ -141,28 +141,48 @@ def build_schema_example_table(columns, example_data):
                 val = example_data['rows'][0][i]
                 example_values[col['name']] = str(val) if val is not None else 'NULL'
 
-    header = '| Column | Type | Example |'
-    separator = '|---|---|---|'
+    partition_set = set(partition_columns) if partition_columns else set()
+    header = '| Column | Type | Index | Partition | Example |'
+    separator = '|---|---|---|---|---|'
     lines = [header, separator]
-    for col in columns:
+    for idx, col in enumerate(columns):
         col_name = col['name']
         col_type = col['type']
+        index_val = str(idx + 1) if num_indexed_cols is not None and idx < num_indexed_cols else ''
+        partition_val = 'x' if col_name in partition_set else ''
         ex = example_values.get(col_name, '')
         if len(ex) > 80:
             ex = ex[:77] + '...'
-        lines.append(f"| {col_name} | {col_type} | `{ex}` |")
+        lines.append(f"| {col_name} | {col_type} | {index_val} | {partition_val} | `{ex}` |")
     return '\n'.join(lines)
 
 
 def transform_sql_source(sql_source):
     if not sql_source:
-        return None
+        return None, None
+    
+    header = None
     if '===' in sql_source:
         parts = sql_source.split('===')
+        header_str = parts[0].strip()
         sql_body = parts[-1].strip() if len(parts) > 1 else sql_source
+        
+        # Replace [nl] with newline BEFORE parsing header
+        header_str = header_str.replace('[nl]', '\n')
+        
+        # Parse header
+        header = {}
+        for line in header_str.split('\n'):
+            if '=' in line:
+                key, value = line.split('=', 1)
+                header[key.strip()] = value.strip()
     else:
         sql_body = sql_source
-    return sql_body.replace('@', '$').replace('[nl]', '\n').replace('`', "'")
+    
+    # Replace [nl] and other chars in SQL body
+    sql_body = sql_body.replace('@', '$').replace('[nl]', '\n').replace('`', "'")
+    
+    return header, sql_body
 
 
 def build_table_markdown(table_info, downstream_map=None):
@@ -224,14 +244,39 @@ def build_table_markdown(table_info, downstream_map=None):
     parts.append("")
 
     # Schema + Example
+    num_indexed_cols = None
+    if 'delta.dataSkippingNumIndexedCols' in props:
+        try:
+            num_indexed_cols = int(props['delta.dataSkippingNumIndexedCols'])
+        except (ValueError, TypeError):
+            pass
+    partition_columns = detail.get('partitionColumns') or []
+    if isinstance(partition_columns, str):
+        import json
+        try:
+            partition_columns = json.loads(partition_columns)
+        except (json.JSONDecodeError, TypeError):
+            partition_columns = [c.strip() for c in partition_columns if c.strip()]
+
     parts.append("## Schema\n")
-    parts.append(build_schema_example_table(columns, example_data))
+    parts.append(build_schema_example_table(columns, example_data, num_indexed_cols, partition_columns))
     parts.append("")
 
     # SQL Transform
-    sql_body = transform_sql_source(sql_source)
+    header, sql_body = transform_sql_source(sql_source)
     if sql_body:
         parts.append("## SQL Transform\n")
+        
+        # Add header table if present
+        if header:
+            parts.append("### Header\n")
+            parts.append("| Key | Value |")
+            parts.append("|---|---|")
+            for key, value in header.items():
+                parts.append(f"| {key} | `{value}` |")
+            parts.append("")
+        
+        parts.append("### SQL Body\n")
         parts.append("```sql")
         parts.append(sql_body)
         parts.append("```\n")

@@ -1,4 +1,188 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["AGENT_INSTRUCTION.md"]
+  "instructions": ["AGENT_INSTRUCTION.md", "AGENTS.md"],
+  "subagent_depth": 2,
+
+  "agent": {
+    "build": {
+      "description": "Full development agent — mặc định khi bắt đầu session",
+      "mode": "primary",
+      "color": "#4B4646",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "skill": "allow"
+      }
+    },
+
+    "plan": {
+      "description": "Phân tích và lập kế hoạch — read-only, không sửa code",
+      "mode": "primary",
+      "temperature": 0.1,
+      "color": "#656363",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "skill": "allow"
+      }
+    },
+
+    "team-lead": {
+      "description": "Điều phối Data Team — tạo thư mục bài toán, giao task, review kết quả",
+      "mode": "primary",
+      "prompt": "{file:.opencode/agents/team-lead.md}",
+      "model": "opencode/big-pickle",
+      "color": "#E74C3C",
+      "temperature": 0.3,
+      "permission": {
+        "task": { "*": "allow" },
+        "edit": {
+          "*": "ask",
+          "skill/*": "allow",
+          "script/*": "allow",
+          "docs/*": "allow",
+          ".opencode/*": "allow"
+        },
+        "bash": {
+          "*": "ask",
+          "docker exec*": "allow",
+          "python query/*": "allow",
+          "python script/*": "allow",
+          "mkdir docs/*": "allow"
+        },
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "skill": "allow",
+        "websearch": "allow",
+        "webfetch": "allow"
+      }
+    },
+
+    "ba": {
+      "description": "Business Analyst — giao tiếp User, viết Data_Requirement.md",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/ba.md}",
+      "model": "opencode/big-pickle",
+      "color": "#3498DB",
+      "temperature": 0.4,
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "bash": { "*": "deny", "python query/*": "allow" },
+        "edit": {
+          "*": "deny",
+          "docs/*/Data_Requirement.md": "allow"
+        },
+        "skill": "allow",
+        "websearch": "allow",
+        "webfetch": "allow"
+      }
+    },
+
+    "data-architect": {
+      "description": "Data Architect — thiết kế schema, viết design doc theo format catalog",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/data-architect.md}",
+      "model": "opencode/big-pickle",
+      "color": "#9B59B6",
+      "temperature": 0.2,
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "bash": {
+          "*": "deny",
+          "python query/*": "allow",
+          "python script/build_catalog.py": "allow"
+        },
+        "edit": {
+          "*": "deny",
+          "docs/*/design/*": "allow"
+        },
+        "skill": "allow"
+      }
+    },
+
+    "developer": {
+      "description": "Developer — viết .sh/.sql/ABI, chạy test qua Docker, _dev suffix",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/developer.md}",
+      "model": "opencode/big-pickle",
+      "color": "#2ECC71",
+      "temperature": 0.2,
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "bash": "allow",
+        "edit": "allow",
+        "skill": "allow"
+      }
+    },
+
+    "tester": {
+      "description": "Tester — kiểm thử job, viết test case, chạy test trên _dev tables",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/tester.md}",
+      "model": "opencode/big-pickle",
+      "color": "#F39C12",
+      "temperature": 0.1,
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "bash": {
+          "*": "deny",
+          "python query/*": "allow",
+          "python script/*": "allow"
+        },
+        "edit": {
+          "*": "deny",
+          "docs/*/test/*": "allow"
+        },
+        "skill": "allow"
+      }
+    },
+
+    "dataops": {
+      "description": "DataOps — cấu hình job, triển khai bảng mới, chạy UAT, monitor, quản lý DAG",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/dataops.md}",
+      "model": "opencode/big-pickle",
+      "color": "#1ABC9C",
+      "temperature": 0.2,
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "bash": "allow",
+        "edit": { "*": "deny", "docs/*/UAT.md": "allow", "skill/*": "allow" },
+        "skill": "allow"
+      }
+    },
+
+    "data-analyst": {
+      "description": "Data Analyst — xây dựng Metabase, viết truy vấn tối ưu, cập nhật kết quả",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/data-analyst.md}",
+      "model": "opencode/big-pickle",
+      "color": "#E67E22",
+      "temperature": 0.5,
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "bash": {
+          "*": "deny",
+          "python query/*": "allow",
+          "python script/*": "allow",
+          "mb *": "allow"
+        },
+        "edit": { "*": "deny", "docs/*/Data_Requirement.md": "allow" },
+        "skill": "allow"
+      }
+    }
+  }
 }

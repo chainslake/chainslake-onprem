@@ -22,12 +22,12 @@
 
 ## Schema
 
-| Column | Type | Example |
-|---|---|---|
-| block_date | date | `2026-07-12T00:00:00Z` |
-| block_number | bigint | `25517685` |
-| block_time | timestamp | `2026-07-12T16:18:23Z` |
-| updated_time | timestamp | `2026-07-13T00:11:46.651Z` |
-| block_receipt | string | `[{"blockHash":"0xaf52563eabb494bde6f7a088711e7f2782b1c7fc36823827206d4a545ffb...` |
-| number_tx | int | `408` |
-| number_logs | int | `704` |
+| Column | Type | Index | Partition | Example |
+|---|---|---|---|---|
+| block_date | date | 1 | x | `2026-07-12T00:00:00Z` |
+| block_number | bigint | 2 |  | `25517685` |
+| block_time | timestamp | 3 |  | `2026-07-12T16:18:23Z` |
+| updated_time | timestamp |  |  | `2026-07-13T00:11:46.651Z` |
+| block_receipt | string |  |  | `[{"blockHash":"0xaf52563eabb494bde6f7a088711e7f2782b1c7fc36823827206d4a545ffb...` |
+| number_tx | int |  |  | `408` |
+| number_logs | int |  |  | `704` |
