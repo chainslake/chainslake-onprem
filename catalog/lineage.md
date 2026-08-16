@@ -1,7 +1,7 @@
 # Data Warehouse Lineage
 
-Biểu đồ thể hiện sự phụ thuộc (lineage) giữa các bảng trong warehouse.
-Mũi tên `-->` nghĩa là "được sử dụng để tạo ra".
+Diagram showing the dependency (lineage) between tables in the warehouse.
+The `-->` arrow means "used to create".
 
 ## Mermaid Graph
 
@@ -30,9 +30,9 @@ graph LR
     T3 --> T7
 ```
 
-## Bảng chi tiết
+## Table Details
 
-| Bảng | Upstream | Downstream |
+| Table | Upstream | Downstream |
 |---|---|---|
 | `ethereum.blocks` | ethereum_origin.transaction_blocks, ethereum_origin.blocks_receipt | _none_ |
 | `ethereum.logs` | ethereum_origin.blocks_receipt | ethereum_decoded.erc20_evt_transfer |
@@ -43,11 +43,11 @@ graph LR
 | `ethereum_origin.transaction_blocks` | _none_ (RPC Node)_ | ethereum.blocks, ethereum.transactions, ethereum_origin.blocks_receipt |
 | `ethereum_token.erc20_transfer` | ethereum.transactions, ethereum_decoded.erc20_evt_transfer, ethereum_contract.erc20_tokens | _none_ |
 
-## Root tables (không có upstream)
+## Root tables (no upstream)
 
 - `ethereum_origin.transaction_blocks`
 
-## Leaf tables (không có downstream)
+## Leaf tables (no downstream)
 
 - `ethereum.blocks`
 - `ethereum_token.erc20_transfer`

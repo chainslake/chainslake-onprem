@@ -1,106 +1,106 @@
-# Skill: Metabase CLI (`mb`) — Quản lý nội dung Metabase
+# Skill: Metabase CLI (`mb`) — Managing Metabase Content
 
-## Mô tả
-Sử dụng Metabase CLI (`mb`) để quản lý databases, cards, dashboards, collections, transforms, và tìm kiếm nội dung trên Metabase on-premise. CLI là công cụ chính để Agent thao tác với Metabase thay vì gọi API trực tiếp.
+## Description
+Using the Metabase CLI (`mb`) to manage databases, cards, dashboards, collections, transforms, and search content on the on-premise Metabase. The CLI is the primary tool for the Agent to interact with Metabase instead of calling the API directly.
 
-## Điều kiện áp dụng
-- Metabase CLI đã cài đặt: `npm install -g @metabase/cli`
-- Đã authenticate: `mb auth login --url http://localhost:53000 --api-key <KEY>`
-- Metabase v0.58+ (hiện tại v0.62.4.3)
+## Applicability Conditions
+- Metabase CLI installed: `npm install -g @metabase/cli`
+- Authenticated: `mb auth login --url http://localhost:53000 --api-key <KEY>`
+- Metabase v0.58+ (currently v0.62.4.3)
 
-## Quy tắc chung
+## General Rules
 
 ### Output format
-- Mặc định: text humans-readable
-- Thêm `--json` để lấy JSON (dùng cho script/agent)
-- `--full` để lấy đầy đủ fields
-- `--fields a,b,c` để project cụ thể
+- Default: human-readable text
+- Add `--json` to get JSON (for scripts/agents)
+- `--full` to get all fields
+- `--fields a,b,c` to project specific fields
 
-### Kiểm tra auth trước khi thao tác
+### Check auth before operating
 ```bash
 mb auth status --json
 ```
-Nếu chưa authenticate → `mb auth login --url http://localhost:53000 --api-key <KEY>`
+If not authenticated → `mb auth login --url http://localhost:53000 --api-key <KEY>`
 
 ---
 
-## Các bước thực hiện
+## Steps
 
 ### 1. Database Operations
 
 ```bash
-# Liệt kê tất cả databases
+# List all databases
 mb db list
 
-# Xem chi tiết database (kèm danh sách tables)
+# View database details (including table list)
 mb db get <db-id> --include tables
 
-# Liệt kê schemas trong database
+# List schemas in a database
 mb db schemas <db-id>
 
-# Liệt kê tables trong một schema
+# List tables in a schema
 mb db schema-tables <db-id> <schema-name>
 
-# Đồng bộ schema thủ công (khi thêm bảng mới)
+# Manually sync schema (when adding a new table)
 mb db sync-schema <db-id>
 
-# Quét lại field values (khi dữ liệu thay đổi)
+# Rescan field values (when data changes)
 mb db rescan-values <db-id>
 ```
 
-**V Chainslake projects:**
-- Database SparkSQL = id 2
-- Database Trino = id 3
+**For Chainslake projects:**
+- SparkSQL database = id 2
+- Trino database = id 3
 
 ```bash
-# Đồng bộ schema cho Spark
+# Sync schema for Spark
 mb db sync-schema 2
 
-# Xem tất cả schemas trong Spark
+# View all schemas in Spark
 mb db schemas 2
 
-# Xem tables trong schema ethereum
+# View tables in the ethereum schema
 mb db schema-tables 2 ethereum
 ```
 
 ### 2. Table & Field Metadata
 
 ```bash
-# Liệt kê tables (có thể filter theo database)
+# List tables (can filter by database)
 mb table list --db-id 2
 
-# Xem chi tiết table kèm fields
+# View table details with fields
 mb table get <table-id> --include fields
 
-# Liệt kê fields của table
+# List fields of a table
 mb table fields <table-id>
 
-# Cập nhật display name, description cho table
+# Update display name, description for a table
 mb table update <table-id> --body '{"display_name":"Blocks","description":"Ethereum blocks data"}'
 
-# Xem field details
+# View field details
 mb field get <field-id>
 
-# Cập nhật field metadata (semantic type, description)
+# Update field metadata (semantic type, description)
 mb field update <field-id> --body '{"semantic_type":"type/PK","description":"Block number"}'
 
-# Xem cached distinct values
+# View cached distinct values
 mb field values <field-id>
 
-# Xem cardinality
+# View cardinality
 mb field summary <field-id>
 ```
 
 ### 3. Cards (Questions, Models, Metrics)
 
 ```bash
-# Liệt kê cards
+# List cards
 mb card list
 
-# Xem chi tiết card
+# View card details
 mb card get <card-id>
 
-# Tạo card mới (native SQL question)
+# Create a new card (native SQL question)
 mb card create --body '{
   "name": "Top 10 Tokens",
   "dataset_query": {
@@ -115,7 +115,7 @@ mb card create --body '{
   "visualization_settings": {}
 }'
 
-# Tạo card (MBQL question)
+# Create a card (MBQL question)
 mb card create --body '{
   "name": "Recent Blocks",
   "dataset_query": {
@@ -130,35 +130,35 @@ mb card create --body '{
   "display": "table"
 }'
 
-# Chạy card và lấy kết quả JSON
+# Run a card and get JSON results
 mb card query <card-id> --export-format json
 
-# Export card ra CSV
+# Export a card to CSV
 mb card query <card-id> --export-format csv > result.csv
 
-# Cập nhật card
+# Update a card
 mb card update <card-id> --body '{"name":"Updated Name"}'
 
-# Archive card (soft-delete)
+# Archive a card (soft-delete)
 mb card archive <card-id>
 ```
 
 ### 4. Dashboards
 
 ```bash
-# Liệt kê dashboards
+# List dashboards
 mb dashboard list
 
-# Xem dashboard kèm dashcards
+# View a dashboard with its dashcards
 mb dashboard get <dashboard-id>
 
-# Tạo dashboard mới
+# Create a new dashboard
 mb dashboard create --body '{
   "name": "Ethereum Overview",
   "description": "Overview of Ethereum blockchain data"
 }'
 
-# Thêm dashcard vào dashboard
+# Add dashcards to a dashboard
 mb dashboard update <dashboard-id> --body '{
   "dashcards": [
     {
@@ -175,12 +175,12 @@ mb dashboard update <dashboard-id> --body '{
 }'
 # Grid 24 columns. size_x=24 = full width, size_x=12 = half
 
-# Cập nhật 1 dashcard cụ thể
+# Update a specific dashcard
 mb dashboard update-dashcard <dashboard-id> <dashcard-id> --body '{
   "col": 0, "row": 6, "size_x": 24, "size_y": 4
 }'
 
-# Thêm filter (parameter) vào dashboard
+# Add a filter (parameter) to the dashboard
 mb dashboard update <dashboard-id> --body '{
   "parameters": [
     {
@@ -192,42 +192,42 @@ mb dashboard update <dashboard-id> --body '{
   ]
 }'
 
-# Xem giá trị selectable cho parameter
+# View selectable values for a parameter
 mb dashboard parameter-values <dashboard-id> <parameter-id>
 
-# Archive dashboard
+# Archive a dashboard
 mb dashboard archive <dashboard-id>
 ```
 
 ### 5. Collections
 
 ```bash
-# Liệt kê collections
+# List collections
 mb collection list
 
-# Xem tree hierarchy (JSON only)
+# View the tree hierarchy (JSON only)
 mb collection tree --json
 
-# Xem items trong collection
+# View items in a collection
 mb collection items <collection-id>
 
-# Tạo collection mới
+# Create a new collection
 mb collection create --body '{
   "name": "Ethereum Analytics",
   "description": "Dashboards and questions for Ethereum"
 }'
 
-# Archive collection
+# Archive a collection
 mb collection archive <collection-id>
 ```
 
 ### 6. Search
 
 ```bash
-# Tìm kiếm nội dung
+# Search content
 mb search "ethereum"
 
-# Tìm kiếm theo loại
+# Search by type
 mb search "blocks" --models card
 mb search "overview" --models dashboard
 mb search "ethereum" --models collection
@@ -236,34 +236,34 @@ mb search "ethereum" --models collection
 ### 7. Settings
 
 ```bash
-# Liệt kê tất cả settings
+# List all settings
 mb setting list
 
-# Xem setting cụ thể
+# View a specific setting
 mb setting get site-name
 
-# Đổi setting
+# Change a setting
 mb setting set site-name '"Chainslake Warehouse"'
-# Lưu ý: giá trị phải là JSON hợp lệ — string cần quotes kép
+# Note: the value must be valid JSON — strings need double quotes
 ```
 
 ### 8. Snippets (Native Query)
 
 ```bash
-# Liệt kê snippets
+# List snippets
 mb snippet list
 
-# Tạo snippet mới
+# Create a new snippet
 mb snippet create --body '{
   "name": "ethereum_tables",
   "description": "List of ethereum tables",
   "content": "SELECT table_name FROM information_schema.tables WHERE table_schema = '\''ethereum'\''"
 }'
 
-# Cập nhật snippet
+# Update a snippet
 mb snippet update <snippet-id> --body '{"content":"..."}'
 
-# Archive snippet
+# Archive a snippet
 mb snippet archive <snippet-id>
 ```
 
@@ -293,42 +293,42 @@ mb measure create --body '{
 ### 10. Upload CSV
 
 ```bash
-# Upload CSV mới (tạo table + model)
+# Upload a new CSV (creates table + model)
 mb upload csv --file data.csv
 
-# Append vào table đã có
+# Append to an existing table
 mb upload append <table-id> --file new_data.csv
 
-# Replace dữ liệu table
+# Replace table data
 mb upload replace <table-id> --file updated_data.csv
 ```
 
 ---
 
-## Workflow thường gặp
+## Common Workflows
 
-### Kiểm tra dữ liệu mới sau khi chạy pipeline
+### Verifying new data after running a pipeline
 ```bash
-# 1. Đồng bộ schema
+# 1. Sync the schema
 mb db sync-schema 2
 
-# 2. Tìm table mới
+# 2. Find the new table
 mb search "blocks" --models table
 
-# 3. Xem fields của table
+# 3. View the table's fields
 mb table get <table-id> --include fields
 ```
 
-### Tạo dashboard từ đầu
+### Creating a dashboard from scratch
 ```bash
-# 1. Tạo collection
+# 1. Create a collection
 COLLECTION_ID=$(mb collection create --body '{"name":"My Dashboard"}' --json | jq -r '.id')
 
-# 2. Tạo cards
+# 2. Create cards
 CARD1=$(mb card create --body '{"name":"Card 1",...}' --json | jq -r '.id')
 CARD2=$(mb card create --body '{"name":"Card 2",...}' --json | jq -r '.id')
 
-# 3. Tạo dashboard với dashcards
+# 3. Create a dashboard with dashcards
 mb dashboard create --body "{
   \"name\": \"My Dashboard\",
   \"collection_id\": $COLLECTION_ID,
@@ -339,12 +339,12 @@ mb dashboard create --body "{
 }"
 ```
 
-### Export kết quả query
+### Exporting query results
 ```bash
-# Chạy card và export CSV
+# Run a card and export CSV
 mb card query 42 --export-format csv > result.csv
 
-# Chạy native SQL qua query command
+# Run native SQL via the query command
 mb query --body '{
   "type": "native",
   "native": {"query": "SELECT * FROM ethereum.blocks LIMIT 10"},
@@ -354,37 +354,37 @@ mb query --body '{
 
 ---
 
-## Lưu ý / Gotchas
+## Notes / Gotchas
 
-### Grid layout cho dashboards
-- Dashboard grid **24 columns** wide
+### Grid layout for dashboards
+- Dashboard grid is **24 columns** wide
 - `size_x = 24` → full width
 - `size_x = 12` → half width
-- `col + size_x ≤ 24`, không overlap
+- `col + size_x ≤ 24`, no overlap
 
-### `mb setup` chỉ dùng 1 lần
-- `mb setup` chỉ chạy trên instance **chưa setup**
-- Nếu đã có admin → lỗi
+### `mb setup` is only used once
+- `mb setup` only runs on an instance that **has not been set up**
+- If an admin already exists → error
 
 ### API key vs Browser OAuth
-- `mb auth login --api-key <KEY>` — headless, phù hợp CI/agent
-- `mb auth login` (không --api-key) — mở browser OAuth (cần v0.62+)
+- `mb auth login --api-key <KEY>` — headless, suitable for CI/agents
+- `mb auth login` (without --api-key) — opens browser OAuth (requires v0.62+)
 
 ### Body JSON format
-- Create/update nhận body qua `--body '<JSON>'` hoặc `--file <path>`
-- String values cần quotes kép: `'"value"'`
+- Create/update accept the body via `--body '<JSON>'` or `--file <path>`
+- String values need double quotes: `'"value"'`
 - Boolean: `true`/`false`
 - Number: bare
 
 ### Entity ID
-- Metabase dùng entity_id (NanoID) cho many resources
-- Dùng `mb eid --model <model> <eid>` để convert sang numeric id
-- Entity ID có thể bắt đầu bằng `-` → dùng `--body` thay vì positional arg
+- Metabase uses entity_id (NanoID) for many resources
+- Use `mb eid --model <model> <eid>` to convert to a numeric id
+- Entity IDs can start with `-` → use `--body` instead of a positional arg
 
 ---
 
-## Ví dụ thực tế
-- Ngày: 2026-07-12
+## Real-World Example
+- Date: 2026-07-12
 - Metabase v0.62.4.3 OSS
 - Metabase CLI v0.2.1
-- Dùng để: sync schema, tìm tables, tạo cards, quản lý dashboards
+- Used for: syncing schemas, finding tables, creating cards, managing dashboards

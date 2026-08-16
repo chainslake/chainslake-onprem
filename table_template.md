@@ -1,14 +1,14 @@
 # [schema].[table_name]
 
-## Trạng thái
+## Status
 
-<Trình bày các thông tin dưới đây dưới dạng bảng>
+<Present the following information in table form>
 
-- Ngày tạo
-- Ngày update gần nhất
-- Số bản ghi
-- Số file
-- Dung lượng
+- Created date
+- Last updated date
+- Number of records
+- Number of files
+- Size
 - frequentType
 - fromBlock
 - toBlock
@@ -17,30 +17,30 @@
 
 ## Lineage
 
-- Upstream tables: Danh sách listInputTables
-- Downstream tables: Chỗ này tính toán để ra được danh sách donwstream dựa vào listInputTables của tất cả các bảng  
+- Upstream tables: List of listInputTables
+- Downstream tables: Compute the downstream list from the listInputTables of all tables
 
 ## Schema 
 
-Show danh sách column, type, example thành 1 bảng thông tin
+Show the columns, types, and examples in a single information table
 
-## SQL Transform <Nếu có >
+## SQL Transform <If any>
 
-Show code SQL trong sqlSource, lưu ý cần thực hiện 1 số replace sau:
+Show the SQL code in sqlSource; note that the following replacements must be performed:
     - @ -> $
     - [nl] -> \n
     - ` -> '
 
 ```sql
-<Cho code vào đây>
+<Put the code here>
 ```
 
-## ABI <Nếu có>
+## ABI <If any>
 
-Mỗi ABI group hiển thị dưới heading `### <tên_abi>`.
-Mỗi event/function hiển thị dưới heading `####` với signature, kèm block code JSON riêng.
+Each ABI group is displayed under the `### <abi_name>` heading.
+Each event/function is displayed under a `####` heading with its signature, along with its own JSON code block.
 
-Ví dụ:
+Example:
 ### erc20
 
 #### `Transfer(indexed address from, indexed address to, uint256 value)` — event

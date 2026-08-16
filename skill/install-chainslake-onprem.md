@@ -1,39 +1,39 @@
-# Skill: Cài đặt Chainslake On-Premises
+# Skill: Install Chainslake On-Premises
 
-## Mô tả
-Hướng dẫn cài đặt hệ thống Chainslake Data Warehouse trên máy local hoặc server riêng bằng Docker Compose.
+## Description
+Guide for installing the Chainslake Data Warehouse system on a local machine or a dedicated server using Docker Compose.
 
-## Điều kiện áp dụng
-- Người dùng yêu cầu cài đặt Chainslake on-prem từ đầu
-- Hệ thống chưa có các Docker service đang chạy
+## Applicability Conditions
+- The user requests a fresh Chainslake on-prem install
+- The system does not have any Docker services running yet
 
 ---
 
-## Yêu cầu hệ thống
+## System Requirements
 
 - Docker >= 20.10, Docker Compose >= 2.0
-- RAM >= 8 GB (khuyến nghị 16 GB)
-- Ổ trống >= 20 GB
+- RAM >= 8 GB (16 GB recommended)
+- Free disk space >= 20 GB
 
-## Kiến trúc service
+## Service Architecture
 
-| Service | Mô tả | Port |
+| Service | Description | Port |
 |---|---|---|
-| `postgres` | PostgreSQL — metadata cho Airflow, Hive, Metabase | 5432 (nội bộ) |
+| `postgres` | PostgreSQL — metadata for Airflow, Hive, Metabase | 5432 (internal) |
 | `node01` | HDFS NameNode + DataNode, Airflow, Trino, Hive, Spark | 58080, 59870, 59001 |
 | `node02` | HDFS DataNode | — |
 | `metabase` | BI tool | 53000 |
 
 ---
 
-## Bước 1: Tạo file `.env`
+## Step 1: Create the `.env` file
 
 ```bash
 cd docker
 cp env_example .env
 ```
 
-Nội dung `.env` mặc định:
+Default `.env` content:
 
 ```env
 POSTGRES_PASSWORD=postgresexamplepassword
@@ -44,21 +44,21 @@ CHAINSLAKE_HOME_DIR=/home/hadoop/projects/chainslake
 CHAINSLAKE_RUN_DIR=/home/hadoop/projects/chainslake-run
 ```
 
-## Bước 2: Khởi tạo thư mục hệ thống
+## Step 2: Initialize the system directories
 
 ```bash
 bash init_dir.sh
 ```
 
-Script thực hiện:
-1. Khởi động tạm container `lakechain/chainslake` → sao chép `/home/hadoop` ra thành `docker/home/`
-2. Tạo `hadoop_data_node01/` và `hadoop_data_node02/`
+The script does:
+1. Temporarily starts the `lakechain/chainslake` container → copies `/home/hadoop` out to `docker/home/`
+2. Creates `hadoop_data_node01/` and `hadoop_data_node02/`
 
-Kết quả:
+Result:
 
 ```
 docker/
-├── home/                    # mount vào node01
+├── home/                    # mounted into node01
 ├── hadoop_data_node01/
 ├── hadoop_data_node02/
 ├── postgres_data/
@@ -68,58 +68,58 @@ docker/
 └── init_dir.sh
 ```
 
-## Bước 3: Khởi động service
+## Step 3: Start the services
 
 ```bash
 docker compose up -d
-docker compose ps          # tất cả phải ở trạng thái Up
+docker compose ps          # all must be in the Up state
 ```
 
-## Bước 4: Kiểm tra Supervisord
+## Step 4: Check Supervisord
 
-Truy cập `http://localhost:59001`
+Access `http://localhost:59001`
 
-| Trường | Giá trị |
+| Field | Value |
 |---|---|
 | Username | `supervisord` |
 | Password | `supervisord@password` |
 
-7 service phải ở trạng thái RUNNING: `airflow`, `hdfs-namenode`, `hdfs-secondarynamenode`, `hdfs-datanode`, `hive-metastore`, `spark-thriftserver`, `trino`.
+7 services must be in the RUNNING state: `airflow`, `hdfs-namenode`, `hdfs-secondarynamenode`, `hdfs-datanode`, `hive-metastore`, `spark-thriftserver`, `trino`.
 
-> Nếu một số service `STARTING`, chờ 1–2 phút rồi refresh.
+> If some services show `STARTING`, wait 1–2 minutes then refresh.
 
-## Bước 5: Kiểm tra Airflow
+## Step 5: Check Airflow
 
-Truy cập `http://localhost:58080`
+Access `http://localhost:58080`
 
-| Trường | Giá trị |
+| Field | Value |
 |---|---|
 | Username | `admin` |
-| Password | Đọc từ file (xem bên dưới) |
+| Password | Read from the file (see below) |
 
-Lấy mật khẩu:
+Get the password:
 
 ```bash
 cat docker/home/projects/chainslake/airflow/standalone_admin_password.txt
 ```
 
-Hoặc qua container:
+Or via the container:
 
 ```bash
 docker exec chainslake-onprem-node01-1 cat /home/hadoop/projects/chainslake/airflow/standalone_admin_password.txt
 ```
 
-> File chỉ xuất hiện sau khi Airflow khởi động xong lần đầu. Nếu chưa có, chờ thêm 1–2 phút.
+> The file only appears after Airflow finishes starting up for the first time. If it is not there yet, wait another 1–2 minutes.
 
-## Bước 6: Thiết lập Metabase
+## Step 6: Set up Metabase
 
-### 6.1. Chuẩn bị credentials
+### 6.1. Prepare credentials
 
 ```bash
 cp script/env_example script/.env
 ```
 
-Chỉnh sửa `script/.env`:
+Edit `script/.env`:
 
 ```env
 METABASE_URL=http://localhost:53000
@@ -128,42 +128,42 @@ METABASE_PASSWORD=<your_password_here>
 METABASE_SITE_NAME=Chainslake Warehouse
 ```
 
-### 6.2. Chạy script setup
+### 6.2. Run the setup script
 
 ```bash
 python script/setup_metabase.py
 ```
 
-Script tự động: đợi Metabase sẵn sàng → tạo admin → tạo API key → thêm SparkSQL/Trino → authenticate CLI.
+The script automatically: waits for Metabase to be ready → creates admin → creates API key → adds SparkSQL/Trino → authenticates the CLI.
 
-Tuỳ chọn:
+Optional:
 ```bash
-python script/setup_metabase.py --skip-databases   # bỏ qua thêm DB
+python script/setup_metabase.py --skip-databases   # skip adding DBs
 python script/setup_metabase.py --skip-cli          # bypass CLI auth
 ```
 
-### 6.3. Kiểm tra
+### 6.3. Verify
 
-- Login `http://localhost:53000`
-- **Settings → Admin → Databases** — Spark và Trino đã được thêm
-- `query/.env` đã có `METABASE_API_KEY=...`
+- Log in to `http://localhost:53000`
+- **Settings → Admin → Databases** — Spark and Trino have been added
+- `query/.env` now contains `METABASE_API_KEY=...`
 
 ---
 
-## Dừng / khởi động lại
+## Stop / restart
 
 ```bash
-docker compose down        # dừng
-docker compose up -d       # khởi động
-docker compose logs -f node01   # xem log
+docker compose down        # stop
+docker compose up -d       # start
+docker compose logs -f node01   # view logs
 ```
 
 ---
 
-## Xử lý sự cố
+## Troubleshooting
 
-| Vấn đề | Cách xử lý |
+| Issue | How to resolve |
 |---|---|
-| Supervisord thiếu service RUNNING | Chờ 2–3 phút sau `docker compose up -d`, refresh lại |
-| Thiếu `standalone_admin_password.txt` | `docker exec chainslake-onprem-node01-1 tail -50 /tmp/airflow.log` — chờ Airflow khởi động xong |
-| Metabase không kết nối SparkSQL | Kiểm tra Spark Thrift Server trên Supervisord, restart nếu chưa RUNNING |
+| Supervisord missing RUNNING services | Wait 2–3 minutes after `docker compose up -d`, refresh again |
+| `standalone_admin_password.txt` missing | `docker exec chainslake-onprem-node01-1 tail -50 /tmp/airflow.log` — wait for Airflow to finish starting |
+| Metabase cannot connect to SparkSQL | Check the Spark Thrift Server in Supervisord, restart it if it is not RUNNING |

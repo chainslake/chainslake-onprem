@@ -1,21 +1,21 @@
 # Skill: Upload CSV to Data Warehouse
 
-## Mô tả
-Upload file CSV từ máy local vào Data Warehouse thông qua HDFS, tạo external table để query.
+## Description
+Upload a CSV file from the local machine to the Data Warehouse via HDFS, then create an external table for querying.
 
-## Điều kiện áp dụng
-- Cần import file CSV vào data warehouse
-- File CSV nằm trong thư mục `chainslake/ext_upload/` của project
+## Applicability Conditions
+- Need to import a CSV file into the data warehouse
+- The CSV file is located in the `chainslake/ext_upload/` directory of the project
 
-## Các bước thực hiện
+## Steps
 
-### Bước 1: Tạo schema (nếu chưa có)
+### Step 1: Create the schema (if it does not exist)
 
 ```bash
 python query/ddl_spark.py "CREATE SCHEMA IF NOT EXISTS <schema_name>"
 ```
 
-### Bước 2: Upload file lên HDFS
+### Step 2: Upload the file to HDFS
 
 ```bash
 docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
@@ -24,7 +24,7 @@ docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
    hdfs dfs -put /home/hadoop/projects/chainslake/ext_upload/<file_name>.csv /user/hive/warehouse/<schema_name>.db/<table_name>/"
 ```
 
-### Bước 3: Tạo external table
+### Step 3: Create the external table
 
 ```bash
 python query/ddl_spark.py "
@@ -43,18 +43,18 @@ LOCATION 'hdfs:///user/hive/warehouse/<schema_name>.db/<table_name>/'
 "
 ```
 
-### Bước 4: Verify dữ liệu
+### Step 4: Verify the data
 
 ```bash
 python query/query_table.py "SELECT * FROM <schema_name>.<table_name> LIMIT 10"
 ```
 
-## Lưu ý / Gotchas
+## Notes / Gotchas
 
-- **Thư mục ext_upload**: Nằm tại `chainslake/ext_upload/` và đã mount sẵn vào container node01 tại `/home/hadoop/projects/chainslake/ext_upload/`. Người dùng chỉ cần bỏ file vào thư mục `chainslake/ext_upload/` trên máy host.
-- **Cập nhật dữ liệu**: Nếu chỉ thay đổi nội dung file (không đổi cấu trúc columns), chỉ cần upload lại file lên HDFS là được, không cần xóa bảng tạo lại.
-- **Metabase API vs SparkSQL**: DDL cần chạy qua `query/ddl_spark.py` (dùng Metabase API) hoặc `spark-sql` trên node trực tiếp. `query/query_table.py` chặn DDL.
-- **OpenCSVSerde**: Dùng cho file CSV có header. Nếu file không có header, cần thêm `"skip.header.line.count" = "1"` vào SERDEPROPERTIES.
+- **ext_upload directory**: Located at `chainslake/ext_upload/` and already mounted into the node01 container at `/home/hadoop/projects/chainslake/ext_upload/`. The user only needs to drop the file into the `chainslake/ext_upload/` directory on the host machine.
+- **Updating data**: If only the file content changes (not the column structure), just re-upload the file to HDFS; no need to drop and recreate the table.
+- **Metabase API vs SparkSQL**: DDL must be run via `query/ddl_spark.py` (uses the Metabase API) or `spark-sql` directly on the node. `query/query_table.py` blocks DDL.
+- **OpenCSVSerde**: Used for CSV files with a header. If the file has no header, add `"skip.header.line.count" = "1"` to the SERDEPROPERTIES.
 
-## Ví dụ thực tế
-- Upload `eth_etf_address.csv` vào `ext_upload.eth_etf_address` (2026-07-11)
+## Real-World Example
+- Uploaded `eth_etf_address.csv` to `ext_upload.eth_etf_address` (2026-07-11)

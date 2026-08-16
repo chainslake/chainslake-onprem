@@ -1,14 +1,14 @@
 # ethereum.transactions
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Attribute | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:49:26 |
-| Ngày update gần nhất | 2026-07-13 00:14:39 |
-| Số bản ghi | 279620 |
-| Số file | 6 |
-| Dung lượng | 91.2 MB |
+| Created At | 2026-07-12 15:49:26 |
+| Last Updated At | 2026-07-13 00:14:39 |
+| Record Count | 279620 |
+| File Count | 6 |
+| Size | 91.2 MB |
 | frequentType | block |
 | fromBlock | 25516917 |
 | toBlock | 25517819 |

@@ -1,8 +1,8 @@
 """
-Trigger và theo dõi Airflow DAG run bằng Airflow CLI (qua docker exec).
+Trigger and monitor Airflow DAG runs using the Airflow CLI (via docker exec).
 
-Thay vì dùng REST API + CSRF auth phức tạp, script gọi trực tiếp
-`airflow` CLI bên trong container qua `docker exec`.
+Instead of using the REST API with complex CSRF auth, this script calls the
+`airflow` CLI directly inside the container via `docker exec`.
 
 Usage:
     python script/trigger_dag.py Ethereum                          # trigger + monitor
@@ -22,7 +22,7 @@ import time
 CONTAINER = "chainslake-onprem-node01-1"
 AIRFLOW_USER = "hadoop"
 
-# Env cần thiết để airflow CLI hoạt động (từ airflow.sh)
+# Env vars required for the airflow CLI to work (from airflow.sh)
 _AIRFLOW_ENV = (
     "export PATH=$PATH:/home/hadoop/.local/bin && "
     "export PYTHONPATH=/home/hadoop/.local/lib/python3.8/site-packages"
@@ -30,7 +30,7 @@ _AIRFLOW_ENV = (
 
 
 def run_airflow_cmd(args, timeout=30):
-    """Chạy airflow CLI bên trong container, trả về stdout."""
+    """Run the airflow CLI inside the container, return stdout."""
     cmd = [
         "docker", "exec", "-u", AIRFLOW_USER, CONTAINER,
         "bash", "-c",
@@ -41,13 +41,13 @@ def run_airflow_cmd(args, timeout=30):
 
 
 def run_host_cmd(cmd, timeout=30):
-    """Chạy shell command trên host."""
+    """Run a shell command on the host."""
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
     return result.stdout.strip(), result.returncode
 
 
 def list_dags():
-    """Liệt kê tất cả DAGs."""
+    """List all DAGs."""
     out, rc = run_airflow_cmd("dags list --output json")
     if rc != 0:
         print(f"Error listing DAGs: {out}")
@@ -59,7 +59,7 @@ def list_dags():
 
 
 def list_runs(dag_id, state=None, limit=10):
-    """Liệt kê DAG runs."""
+    """List DAG runs."""
     cmd = f"dags list-runs -d {dag_id} -o json"
     if state:
         cmd += f" --state {state}"
@@ -75,15 +75,15 @@ def list_runs(dag_id, state=None, limit=10):
 
 
 def trigger_dag(dag_id):
-    """Trigger một DAG run mới."""
+    """Trigger a new DAG run."""
     out, rc = run_airflow_cmd(f"dags trigger {dag_id} -o json", timeout=60)
     if rc != 0:
         print(f"Error triggering DAG: {out}")
         return None
 
-    # JSON output có thể bị lẫn log lines, tìm array JSON trong output
+    # The JSON output may be mixed with log lines; find the JSON array in the output
     try:
-        # Tìm start của JSON array
+        # Find the start of the JSON array
         idx = out.find("[{")
         if idx >= 0:
             data = json.loads(out[idx:])
@@ -92,7 +92,7 @@ def trigger_dag(dag_id):
     except json.JSONDecodeError:
         pass
 
-    # Fallback: parse run_id từ output text
+    # Fallback: parse run_id from the text output
     match = re.search(r'"dag_run_id"\s*:\s*"([^"]+)"', out)
     if match:
         return {"dag_run_id": match.group(1)}
@@ -102,11 +102,11 @@ def trigger_dag(dag_id):
 
 
 def get_task_states(dag_id, run_id):
-    """Lấy trạng thái các tasks trong một DAG run."""
+    """Get the states of the tasks in a DAG run."""
     cmd = f"tasks states-for-dag-run {dag_id} {run_id} -o json"
     out, rc = run_airflow_cmd(cmd, timeout=60)
     if rc != 0:
-        # Thử parse text output nếu JSON fail
+        # Try parsing the text output if JSON fails
         return parse_task_states_text(out)
     try:
         return json.loads(out)
@@ -115,7 +115,7 @@ def get_task_states(dag_id, run_id):
 
 
 def parse_task_states_text(text):
-    """Parse task states từ text output (không phải JSON)."""
+    """Parse task states from text output (non-JSON)."""
     tasks = []
     for line in text.splitlines():
         line = line.strip()
@@ -132,7 +132,7 @@ def parse_task_states_text(text):
 
 
 def set_dag_paused(dag_id, paused):
-    """Pause/unpause DAG."""
+    """Pause/unpause a DAG."""
     action = "pause" if paused else "unpause"
     out, rc = run_airflow_cmd(f"dags {action} {dag_id}")
     return rc == 0
@@ -140,10 +140,10 @@ def set_dag_paused(dag_id, paused):
 
 def cancel_all_runs(dag_id):
     """
-    Pause DAG để ngăn run mới.
+    Pause the DAG to prevent new runs.
 
-    Lưu ý: Airflow CLI không hỗ trợ trực tiếp cancel một DAG run.
-    Strategy: pause DAG → report các runs đang chạy.
+    Note: the Airflow CLI does not directly support cancelling a DAG run.
+    Strategy: pause the DAG → report the runs currently in progress.
     """
     set_dag_paused(dag_id, True)
     runs = list_runs(dag_id, limit=20)
@@ -161,7 +161,7 @@ def cancel_all_runs(dag_id):
 
 
 def show_status(dag_id):
-    """Hiển thị status các DAG runs gần nhất."""
+    """Show the status of the most recent DAG runs."""
     runs = list_runs(dag_id, limit=5)
     if not runs:
         print(f"No runs found for DAG '{dag_id}'")
@@ -183,11 +183,11 @@ def show_status(dag_id):
 
 
 def trigger_and_monitor(dag_id, poll_interval=30, max_wait=3600):
-    """Trigger DAG, monitor cho đến khi hoàn thành."""
-    # Pause trước để tránh conflict
+    """Trigger a DAG and monitor until it completes."""
+    # Pause first to avoid conflicts
     cancel_all_runs(dag_id)
 
-    # Unpause rồi trigger
+    # Unpause then trigger
     set_dag_paused(dag_id, False)
     result = trigger_dag(dag_id)
     if not result:
@@ -206,7 +206,7 @@ def trigger_and_monitor(dag_id, poll_interval=30, max_wait=3600):
     while time.time() - start < max_wait:
         time.sleep(poll_interval)
 
-        # Tìm run cụ thể đã trigger (không chỉ lấy run đầu tiên)
+        # Find the specific run that was triggered (not just the first run)
         runs = list_runs(dag_id, limit=50)
         matched = [r for r in runs if r.get("run_id") == run_id]
         if not matched:
@@ -244,7 +244,7 @@ def main():
     parser.add_argument("--max-wait", type=int, default=3600, help="Max wait time in seconds")
     args = parser.parse_args()
 
-    # Kiểm tra container đang chạy
+    # Check that the container is running
     out, rc = run_host_cmd(f"docker ps --filter name={CONTAINER} --format '{{{{.Names}}}}'")
     if CONTAINER not in out:
         print(f"Error: Container '{CONTAINER}' is not running.")
@@ -255,7 +255,7 @@ def main():
     elif args.status:
         show_status(args.dag_id)
     elif args.no_wait:
-        # Pause → unpause → trigger rồi thoát ngay
+        # Pause → unpause → trigger then exit immediately
         cancel_all_runs(args.dag_id)
         set_dag_paused(args.dag_id, False)
         result = trigger_dag(args.dag_id)

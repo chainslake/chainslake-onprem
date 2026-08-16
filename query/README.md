@@ -1,44 +1,44 @@
 # Query Scripts
 
-Bộ script Python để tương tác với Data Warehouse thông qua Metabase API.
+A set of Python scripts to interact with the Data Warehouse through the Metabase API.
 
-## Cài đặt
+## Setup
 
-### 1. Cài đặt thư viện
+### 1. Install dependencies
 
 ```bash
 pip install requests python-dotenv
 ```
 
-### 2. Cấu hình API Key
+### 2. Configure the API Key
 
-Tạo file `.env` trong cùng thư mục với nội dung:
+Create a `.env` file in the same directory with the following content:
 
 ```
-METABASE_API_KEY=<API key của bạn>
+METABASE_API_KEY=<Your API key>
 ```
 
-Để tạo API key, truy cập: `http://localhost:53000/admin/settings/authentication`
+To create an API key, visit: `http://localhost:53000/admin/settings/authentication`
 
 ---
 
 ## Scripts
 
-### `get_example_table.py` — Lấy bản ghi mẫu từ bảng
+### `get_example_table.py` — Get sample records from a table
 
-Truy vấn 1 bản ghi từ bảng để xem schema và dữ liệu mẫu.
+Query 1 record from the table to view its schema and sample data.
 
-**Cú pháp:**
+**Usage:**
 ```bash
-python get_example_table.py <tên_bảng>
+python get_example_table.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python get_example_table.py ethereum.transactions
 ```
 
-**Kết quả trả về:**
+**Output:**
 ```json
 {
   "rows": [["0xabc...", 1234567, ...]],
@@ -51,82 +51,82 @@ python get_example_table.py ethereum.transactions
 
 ---
 
-### `query_table.py` — Thực thi câu truy vấn SQL
+### `query_table.py` — Execute an SQL query
 
-Thực thi câu truy vấn SELECT trên Data Warehouse. Script sẽ:
-- **Chặn** các câu truy vấn có thể thay đổi dữ liệu (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `MERGE`)
-- **Yêu cầu** câu truy vấn phải có mệnh đề `LIMIT`
+Execute a SELECT query on the Data Warehouse. The script will:
+- **Block** queries that can modify data (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `MERGE`)
+- **Require** the query to include a `LIMIT` clause
 
-**Cú pháp:**
+**Usage:**
 ```bash
-python query_table.py "<câu_truy_vấn_SQL>"
+python query_table.py "<sql_query>"
 ```
 
-**Ví dụ:**
+**Examples:**
 ```bash
 python query_table.py "SELECT * FROM ethereum.transactions LIMIT 10"
 python query_table.py "SELECT hash, block_number FROM ethereum.transactions WHERE block_number > 1000000 LIMIT 50"
 ```
 
-**Lỗi khi thiếu LIMIT:**
+**Error when LIMIT is missing:**
 ```
-Lỗi: Câu truy vấn phải có mệnh đề LIMIT để giới hạn số bản ghi trả về.
-Ví dụ: SELECT * FROM ethereum.transactions LIMIT 100
+Error: The query must include a LIMIT clause to limit the number of returned records.
+Example: SELECT * FROM ethereum.transactions LIMIT 100
 ```
 
-**Lỗi khi dùng lệnh destructive:**
+**Error when using a destructive command:**
 ```
-Lỗi: Câu truy vấn chứa lệnh 'DROP' có thể thay đổi dữ liệu và bị chặn.
-Chỉ cho phép các câu truy vấn SELECT (read-only).
+Error: The query contains the 'DROP' command, which can modify data and is blocked.
+Only SELECT (read-only) queries are allowed.
 ```
 
 ---
 
-### `drop_table.py` — Xóa bảng
+### `drop_table.py` — Drop a table
 
-Xóa một bảng khỏi Data Warehouse. Script yêu cầu xác nhận trước khi thực hiện để tránh xóa nhầm.
+Drop a table from the Data Warehouse. The script requires confirmation before proceeding to prevent accidental drops.
 
-**Cú pháp:**
+**Usage:**
 ```bash
-python drop_table.py <tên_bảng>
+python drop_table.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python drop_table.py ethereum.transactions
 ```
 
-**Quy trình xác nhận:**
+**Confirmation flow:**
 ```
-Bạn có chắc chắn muốn xóa bảng 'ethereum.transactions'? Nhập tên bảng để xác nhận: ethereum.transactions
-Đã xóa bảng 'ethereum.transactions' thành công.
+Are you sure you want to drop table 'ethereum.transactions'? Type the table name to confirm: ethereum.transactions
+Table 'ethereum.transactions' dropped successfully.
 ```
 
-Nếu nhập sai tên bảng, thao tác sẽ bị hủy:
+If an incorrect table name is entered, the operation is cancelled:
 ```
-Bạn có chắc chắn muốn xóa bảng 'ethereum.transactions'? Nhập tên bảng để xác nhận: abc
-Xác nhận không khớp. Hủy thao tác xóa bảng.
+Are you sure you want to drop table 'ethereum.transactions'? Type the table name to confirm: abc
+Confirmation does not match. Table drop operation cancelled.
 ```
 
 ---
 
-### `check_table_properties.py` — Kiểm tra properties của bảng
+### `check_table_properties.py` — Check table properties
 
-Hiển thị tblproperties của bảng trên Data Warehouse. Đặc biệt useful khi kiểm tra trạng thái lock và phạm vi dữ liệu.
+Display the tblproperties of a table in the Data Warehouse. Particularly useful for checking the lock status and data range.
 
-**Cú pháp:**
+**Usage:**
 ```bash
-python check_table_properties.py <tên_bảng>
+python check_table_properties.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python check_table_properties.py ethereum.blocks
 ```
 
-**Kết quả trả về:**
+**Output:**
 ```
-=== tblproperties của 'ethereum.blocks' ===
+=== tblproperties of 'ethereum.blocks' ===
 
 Property                        Value
 --------------------------------------------------------------------------------
@@ -135,61 +135,61 @@ frequenceType                   block
 fromBlock                       12345678
 toBlock                         12345999
 
-=== Property quan trọng ===
+=== Important properties ===
 
-  isLock (ĐÃ MỞ KHÓA): 0
+  isLock (UNLOCKED): 0
   frequenceType: block
   fromBlock: 12345678
   toBlock: 12345999
 ```
 
-**Các property quan trọng:**
-| Property | Mô tả |
+**Important properties:**
+| Property | Description |
 |---|---|
-| `isLock` | Trạng thái khóa: 1 = bị khóa (job đang ghi), 0 = mở khóa |
-| `frequenceType` | Loại tần suất: `block`, `hour`, `minute`, `day` |
-| `fromBlock`, `toBlock` | Phạm vi block hiện có (nếu frequenceType=block) |
-| `fromEpochSecond`, `toEpochSecond` | Phạm vi epoch second hiện có (nếu frequenceType là minute/hour/day) |
+| `isLock` | Lock status: 1 = locked (a job is writing), 0 = unlocked |
+| `frequenceType` | Frequency type: `block`, `hour`, `minute`, `day` |
+| `fromBlock`, `toBlock` | Existing block range (if frequenceType=block) |
+| `fromEpochSecond`, `toEpochSecond` | Existing epoch second range (if frequenceType is minute/hour/day) |
 
 ---
 
-### `unlock_table.py` — Mở khóa bảng
+### `unlock_table.py` — Unlock a table
 
-Mở khóa bảng khi job bị lỗi "Table is Lock". Yêu cầu xác nhận trước khi thực hiện.
+Unlock a table when a job fails with the "Table is Lock" error. Requires confirmation before proceeding.
 
-**⚠️ Lưu ý:** Chỉ sử dụng khi chắc chắn không còn job nào đang ghi dữ liệu vào bảng.
+**⚠️ Note:** Only use when you are certain no job is currently writing data to the table.
 
-**Cú pháp:**
+**Usage:**
 ```bash
-python unlock_table.py <tên_bảng>
+python unlock_table.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python unlock_table.py ethereum.blocks
 ```
 
-**Quy trình xác nhận:**
+**Confirmation flow:**
 ```
-⚠️  Bạn sắp mở khóa bảng 'ethereum.blocks'.
-    Lệnh sẽ thực thi: ALTER TABLE ethereum.blocks SET TBLPROPERTIES (isLock=0)
+⚠️  You are about to unlock table 'ethereum.blocks'.
+    Command to be executed: ALTER TABLE ethereum.blocks SET TBLPROPERTIES (isLock=0)
 
-Nhập tên bảng để xác nhận: ethereum.blocks
-✅ Đã mở khóa bảng 'ethereum.blocks' thành công.
+Type the table name to confirm: ethereum.blocks
+✅ Table 'ethereum.blocks' unlocked successfully.
 ```
 
 ---
 
-## Cấu trúc project
+## Project structure
 
 ```
 query/
-├── .env                      # Biến môi trường (API key) — không commit lên git
-├── env_example               # File mẫu cấu hình .env
-├── metabase_query.py         # Module lõi gọi Metabase API
-├── get_example_table.py      # Lấy bản ghi mẫu từ bảng
-├── query_table.py            # Thực thi câu truy vấn SQL (read-only)
-├── drop_table.py             # Xóa bảng (có xác nhận)
-├── check_table_properties.py # Kiểm tra tblproperties của bảng
-└── unlock_table.py           # Mở khóa bảng (set isLock=0)
+├── .env                      # Environment variables (API key) — not committed to git
+├── env_example               # Sample .env configuration file
+├── metabase_query.py         # Core module for calling the Metabase API
+├── get_example_table.py      # Get sample records from a table
+├── query_table.py            # Execute an SQL query (read-only)
+├── drop_table.py             # Drop a table (with confirmation)
+├── check_table_properties.py # Check the tblproperties of a table
+└── unlock_table.py           # Unlock a table (set isLock=0)
 ```

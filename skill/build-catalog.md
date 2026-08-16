@@ -1,48 +1,48 @@
 # Skill: Build Data Warehouse Catalog
 
-## Mô tả
-Tạo tài liệu catalog markdown cho toàn bộ bảng trong data warehouse, bao gồm metadata, schema, ví dụ dữ liệu và lineage graph.
+## Description
+Create markdown catalog documentation for all tables in the data warehouse, including metadata, schema, sample data, and the lineage graph.
 
-## Điều kiện áp dụng
-- Khi người dùng yêu cầu tạo/cập nhật catalog warehouse
-- Khi cần snapshot trạng thái hiện tại của tất cả bảng trong DWH
-- Sau khi thêm pipeline mới để cập nhật catalog
+## Applicability Conditions
+- When the user requests to create/update the warehouse catalog
+- When a snapshot of the current state of all tables in the DWH is needed
+- After adding a new pipeline to update the catalog
 
-## Các bước thực hiện
+## Steps
 
-### Bước 1: Chạy script build_catalog.py
+### Step 1: Run the build_catalog.py script
 ```bash
 python script/build_catalog.py
 ```
 
-Tham số tùy chỉnh:
-- `--skip-count`: Bỏ qua đếm rows (chạy nhanh hơn, useful khi warehouse lớn)
-- `--skip-example`: Bỏ qua lấy ví dụ dữ liệu
-- `--output-dir <path>`: Chỉ định thư mục output khác (mặc định: `catalog/`)
+Optional parameters:
+- `--skip-count`: Skip row counting (runs faster, useful when the warehouse is large)
+- `--skip-example`: Skip fetching sample data
+- `--output-dir <path>`: Specify a different output directory (default: `catalog/`)
 
-### Bước 2: Kiểm tra output
-Thư mục `catalog/` sẽ chứa:
-- `lineage.md`: Biểu đồ Mermaid graph thể hiện upstream/downstream
-- `[schema].[table].md`: File markdown per-table với:
-  - Trạng thái (ngày tạo, update, rows, files, size, block range)
+### Step 2: Verify the output
+The `catalog/` directory will contain:
+- `lineage.md`: Mermaid graph showing upstream/downstream
+- `[schema].[table].md`: Per-table markdown file with:
+  - Status (created date, updated, rows, files, size, block range)
   - Lineage (upstream/downstream)
   - Schema (columns + types)
-  - Ví dụ dữ liệu
-  - SQL Transform (nếu có trong tblproperties)
-  - ABI (nếu có trong tblproperties)
+  - Sample data
+  - SQL Transform (if present in tblproperties)
+  - ABI (if present in tblproperties)
 
-### Bước 3: Review và commit
+### Step 3: Review and commit
 ```bash
 git add catalog/
 git commit -m "Update DWH catalog"
 ```
 
-## Lưu ý / Gotchas
-- Script đọc `METABASE_API_KEY` từ `query/.env` — cần đảm bảo file này tồn tại và hợp lệ
-- Script dùng Spark engine (không phải Trino) để query
-- Nếu warehouse có nhiều bảng, script sẽ chạy chậm do query từng bảng một
-- `sqlSource` và `abi` chỉ xuất hiện trong tblproperties nếu pipeline đã ghi chúng vào
-- Nếu tblproperties không có `sqlSource`/`abi`, file markdown sẽ không có section SQL Transform/ABI
+## Notes / Gotchas
+- The script reads `METABASE_API_KEY` from `query/.env` — make sure this file exists and is valid
+- The script uses the Spark engine (not Trino) to query
+- If the warehouse has many tables, the script will run slowly because it queries each table individually
+- `sqlSource` and `abi` only appear in tblproperties if the pipeline wrote them there
+- If tblproperties has no `sqlSource`/`abi`, the markdown file will not have the SQL Transform/ABI sections
 
-## Ví dụ thực tế
-Script được tạo ra theo yêu cầu build catalog warehouse lần đầu.
+## Real-World Example
+The script was created to fulfill the first warehouse catalog build request.

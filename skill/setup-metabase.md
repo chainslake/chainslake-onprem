@@ -1,42 +1,42 @@
 # Skill: Setup Metabase On-Premise
 
-## Mô tả
-Thiết lập Metabase trên môi trường on-premise: tạo admin account, kết nối database (SparkSQL/Trino), tạo API key cho automation, và sử dụng Metabase CLI (`mb`) để quản lý.
+## Description
+Setting up Metabase in an on-premise environment: creating the admin account, connecting databases (SparkSQL/Trino), creating an API key for automation, and using the Metabase CLI (`mb`) for management.
 
-## Điều kiện áp dụng
-- Metabase container đã được khởi động (port 53000)
-- Truy cập lần đầu vào `http://localhost:53000` — chưa có admin account
-- Cần setup lại Metabase từ đầu (reset database)
-- Metabase v0.62+ (hỗ trợ Metabase CLI `mb`)
+## Applicability Conditions
+- The Metabase container has been started (port 53000)
+- First-time access to `http://localhost:53000` — no admin account yet
+- Need to redo the Metabase setup from scratch (database reset)
+- Metabase v0.62+ (supports the Metabase CLI `mb`)
 
-## Cài đặt Metabase CLI
+## Install the Metabase CLI
 
 ```bash
-# Cài đặt (cần Node.js v18+)
+# Install (requires Node.js v18+)
 npm install -g @metabase/cli
 
-# Xác minh
+# Verify
 mb --version
 
-# Đăng nhập
+# Login
 mb auth login --url http://localhost:53000 --api-key <API_KEY>
 
-# Kiểm tra trạng thái
+# Check status
 mb auth status
 ```
 
-## Các bước thực hiện
+## Steps
 
-### Bước 1: Cấu hình credentials trong `script/.env`
+### Step 1: Configure credentials in `script/.env`
 
-Script đọc tất cả credentials từ `script/.env`. **KHÔNG truyền mật khẩu qua command line.**
+The script reads all credentials from `script/.env`. **DO NOT pass passwords via the command line.**
 
 ```bash
-# Nếu chưa có script/.env, copy từ template
+# If script/.env does not exist, copy from the template
 cp script/env_example script/.env
 ```
 
-Chỉnh sửa `script/.env` với thông tin thực tế:
+Edit `script/.env` with the actual information:
 
 ```env
 METABASE_URL=http://localhost:53000
@@ -45,114 +45,114 @@ METABASE_PASSWORD=<your_password_here>
 METABASE_SITE_NAME=Chainslake Warehouse
 ```
 
-### Bước 2: Chạy script setup
+### Step 2: Run the setup script
 
 ```bash
 python script/setup_metabase.py
 ```
 
-Script tự động:
-1. Đợi Metabase ready (kiểm tra `/api/health`)
-2. Tạo admin account qua `/api/setup` API
-3. Tạo API key và ghi vào `query/.env`
-4. Thêm SparkSQL database connection
-5. Thêm Trino database connection (nếu Starburst driver available)
-6. Authenticate Metabase CLI (`mb auth login`)
+The script automatically:
+1. Waits for Metabase to be ready (checks `/api/health`)
+2. Creates the admin account via the `/api/setup` API
+3. Creates the API key and writes it to `query/.env`
+4. Adds the SparkSQL database connection
+5. Adds the Trino database connection (if the Starburst driver is available)
+6. Authenticates the Metabase CLI (`mb auth login`)
 
-**Tham số tuỳ chọn:**
+**Optional parameters:**
 ```bash
-python script/setup_metabase.py --skip-databases    # Bỏ qua thêm database
+python script/setup_metabase.py --skip-databases    # Skip adding databases
 python script/setup_metabase.py --skip-cli          # Bypass CLI auth
-python script/setup_metabase.py --api-key-file path/to/.env  # Đổi nơi ghi API key
+python script/setup_metabase.py --api-key-file path/to/.env  # Change where the API key is written
 ```
 
-### Bước 2: Sử dụng Metabase CLI để quản lý
+### Step 2: Use the Metabase CLI to manage
 
 ```bash
-# Liệt kê databases
+# List databases
 mb db list
 
-# Xem chi tiết database
+# View database details
 mb db get <db-id>
 
-# Đồng bộ schema
+# Sync the schema
 mb db sync-schema <db-id>
 
-# Quét lại field values
+# Rescan field values
 mb db rescan-values <db-id>
 
-# Liệt kê schemas
+# List schemas
 mb db schemas <db-id>
 
-# Liệt kê tables trong schema
+# List tables in a schema
 mb db schema-tables <db-id> <schema-name>
 
-# Liệt kê cards (questions/models/metrics)
+# List cards (questions/models/metrics)
 mb card list
 
-# Liệt kê dashboards
+# List dashboards
 mb dashboard list
 
-# Liệt kê collections
+# List collections
 mb collection list
 
-# Tìm kiếm nội dung
+# Search content
 mb search <query>
 
-# Xem settings
+# View settings
 mb setting get <key>
 ```
 
-### Bước 3: Kiểm tra kết quả
+### Step 3: Verify the results
 
-1. Truy cập `http://localhost:53000` — login bằng admin credentials
-2. Vào **Settings → Admin → Databases** — kiểm tra Spark/Trino đã được thêm
-3. File `query/.env` đã có `METABASE_API_KEY=...`
+1. Access `http://localhost:53000` — log in with the admin credentials
+2. Go to **Settings → Admin → Databases** — verify Spark/Trino have been added
+3. The file `query/.env` now contains `METABASE_API_KEY=...`
 
-## Lưu ý / Gotchas
+## Notes / Gotchas
 
 ### API `/api/setup` — Metabase v0.62.x format
-Metabase v0.62.x OSS **không hỗ trợ** `MB_CONFIG_FILE` (chỉ Pro/Enterprise).
-Endpoint `/api/setup` yêu cầu format đặc biệt:
+Metabase v0.62.x OSS **does not support** `MB_CONFIG_FILE` (Pro/Enterprise only).
+The `/api/setup` endpoint requires a special format:
 
 ```json
 {
-  "token": "<setup-token từ /api/session/properties>",
+  "token": "<setup-token from /api/session/properties>",
   "user": {"email": "...", "first_name": "...", "last_name": "...", "password": "..."},
   "prefs": {"site_name": "...", "site_locale": "en"},
   "database": null
 }
 ```
 
-**Sai thường gặp:**
-- Gửi `email` ở root level → lỗi `"email": ["should be a string, received: nil"]`
-- Dùng `invited_email` ở root level → cùng lỗi trên
-- Password quá yếu (ví dụ `admin123456`) → lỗi `"password is too common"`
-- Gửi `password` ở root level thay vì trong `user` object → lỗi nil
+**Common mistakes:**
+- Sending `email` at the root level → error `"email": ["should be a string, received: nil"]`
+- Using `invited_email` at the root level → the same error as above
+- Password too weak (e.g., `admin123456`) → error `"password is too common"`
+- Sending `password` at the root level instead of inside the `user` object → nil error
 
 ### Trino connection
-Starburst Metabase driver yêu cầu SSL. Nếu server Trino local không bật SSL:
-- Lỗi `"TLS/SSL is required for authentication with username and password"`
-- Set `ssl: true, insecure: true` trong details
-- Nếu vẫn fail (lỗi SSL message), skip Trino — SparkSQL đủ dùng
+The Starburst Metabase driver requires SSL. If the local Trino server does not have SSL enabled:
+- Error `"TLS/SSL is required for authentication with username and password"`
+- Set `ssl: true, insecure: true` in the details
+- If it still fails (SSL message error), skip Trino — SparkSQL is sufficient
 
 ### API Key
-- Endpoint: `POST /api/api-key` (cần session token)
-- Key trả về 1 lần duy nhất qua `unmasked_key`
-- Ghi ngay vào `query/.env`
+- Endpoint: `POST /api/api-key` (requires a session token)
+- The key is returned only once via `unmasked_key`
+- Write it to `query/.env` immediately
 
 ### Metabase CLI (`mb`)
-- Yêu cầu Metabase v0.58+ (hiện tại v0.62.4.3)
-- `mb auth login` hỗ trợ API key hoặc browser OAuth (v0.62+)
-- CLI không hỗ trợ `db create` — dùng API `/api/database` để thêm database
-- CLI hỗ trợ: list/get/sync/rescan cho databases; CRUD cho cards, dashboards, collections
-- Output mặc định là text, thêm `--json` để lấy JSON
-- Dùng `mb skills get core` để xem conventions chi tiết
+- Requires Metabase v0.58+ (currently v0.62.4.3)
+- `mb auth login` supports API key or browser OAuth (v0.62+)
+- The CLI does not support `db create` — use the `/api/database` API to add databases
+- The CLI supports: list/get/sync/rescan for databases; CRUD for cards, dashboards, collections
+- Output is text by default, add `--json` to get JSON
+- Use `mb skills get core` to see detailed conventions
 
-## Ví dụ thực tế
-- Ngày: 2026-07-12
+## Real-World Example
+- Date: 2026-07-12
 - Metabase v0.62.4.3 OSS
 - Metabase CLI v0.2.1
-- Setup thành công với user nested object format
+- Setup succeeded with the nested user object format
 - SparkSQL: OK, Trino: OK
-- CLI authenticated và hoạt động bình thường
+- CLI authenticated and working normally

@@ -1,128 +1,128 @@
 # Chainslake On-Premises — Blockchain Data Warehouse
 
-**Chainslake** là một blockchain data warehouse, cho phép người dùng tự quản lý và vận hành hạ tầng phân tích dữ liệu blockchain một cách an toàn và riêng tư. Chainslake cung cấp cả giải pháp **On-Cloud** và **On-Premises** phù hợp với nhu cầu của nhiều khách hàng.
+**Chainslake** is a blockchain data warehouse that lets users manage and operate their own blockchain data analytics infrastructure in a secure and private way. Chainslake provides both **On-Cloud** and **On-Premises** solutions to suit the needs of different customers.
 
-Repository này giới thiệu giải pháp **Onprem**, phù hợp với nhóm khách hàng đang có sẵn hạ tầng phần cứng hoặc muốn chạy thử nghiệm trên máy local.
+This repository introduces the **Onprem** solution, suitable for customers who already have hardware infrastructure or want to run a trial on a local machine.
 
 ---
 
-## Mục lục
+## Table of Contents
 
-1. [Tổng quan kiến trúc](#tổng-quan-kiến-trúc)
-2. [Cài đặt hệ thống](#cài-đặt-hệ-thống)
-3. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-4. [Thư mục `chainslake-run`](#thư-mục-chainslake-run)
-5. [Thư mục `chainslake`](#thư-mục-chainslake)
-   - [jobs — Script thực thi](#jobs--script-thực-thi)
-   - [sql — Logic biến đổi dữ liệu](#sql--logic-biến-đổi-dữ-liệu)
-   - [evm/abi — ABI Contract](#evmabi--abi-contract)
+1. [Architecture Overview](#architecture-overview)
+2. [System Installation](#system-installation)
+3. [Directory Structure](#directory-structure)
+4. [The `chainslake-run` Directory](#the-chainslake-run-directory)
+5. [The `chainslake` Directory](#the-chainslake-directory)
+   - [jobs — Execution Scripts](#jobs--execution-scripts)
+   - [sql — Data Transformation Logic](#sql--data-transformation-logic)
+   - [evm/abi — Contract ABI](#evmabi--contract-abi)
    - [airflow/dags — Pipeline & Scheduling](#airflowdags--pipeline--scheduling)
-   - [application.properties — Cấu hình pipeline](#applicationproperties--cấu-hình-pipeline)
-6. [Luồng hoạt động](#luồng-hoạt-động)
-7. [Ví dụ chi tiết: Pipeline Ethereum](#ví-dụ-chi-tiết-pipeline-ethereum)
-8. [Tool query dữ liệu trong Data warehouse](#tool-query-dữ-liệu-trong-data-warehouse)
-9. [Liên hệ](#liên-hệ)
+   - [application.properties — Pipeline Configuration](#applicationproperties--pipeline-configuration)
+6. [Data Flow](#data-flow)
+7. [Detailed Example: Ethereum Pipeline](#detailed-example-ethereum-pipeline)
+8. [Data Warehouse Query Tools](#data-warehouse-query-tools)
+9. [Contact](#contact)
 
 ---
 
-## Tổng quan kiến trúc
+## Architecture Overview
 
-Chainslake Onprem được xây dựng trên nền tảng các công nghệ Big Data mã nguồn mở:
+Chainslake Onprem is built on open-source Big Data technologies:
 
-- **HDFS** — Lưu trữ dữ liệu phân tán (Delta Lake format)
-- **Apache Spark** — Xử lý và biến đổi dữ liệu theo batch
-- **Apache Hive Metastore** — Quản lý metadata các bảng
-- **Trino** — Query engine tốc độ cao để truy vấn dữ liệu
-- **Apache Airflow** — Lên lịch và quản lý pipeline
-- **Metabase** — Giao diện BI để phân tích và trực quan hóa dữ liệu
+- **HDFS** — Distributed data storage (Delta Lake format)
+- **Apache Spark** — Batch data processing and transformation
+- **Apache Hive Metastore** — Table metadata management
+- **Trino** — High-speed query engine for data queries
+- **Apache Airflow** — Pipeline scheduling and management
+- **Metabase** — BI interface for data analysis and visualization
 
-Toàn bộ hệ thống được đóng gói trong Docker, giúp triển khai nhanh chóng trên bất kỳ môi trường nào.
+The entire system is packaged in Docker, enabling fast deployment on any environment.
 
 ---
 
-## Cài đặt hệ thống
+## System Installation
 
-Để cài đặt và khởi động hệ thống Chainslake Onprem trên máy local hoặc server riêng, hãy đọc và thực hiện theo hướng dẫn chi tiết trong:
+To install and start the Chainslake Onprem system on a local machine or dedicated server, read and follow the detailed instructions in:
 
 📄 **[docker/README.md](./docker/README.md)**
 
-Hướng dẫn đó bao gồm toàn bộ các bước:
-- Yêu cầu hệ thống
-- Cấu hình môi trường
-- Khởi tạo và khởi động các service
-- Kiểm tra Supervisord, Airflow, Metabase
-- Xử lý sự cố thường gặp
+That guide covers all the steps:
+- System requirements
+- Environment configuration
+- Initializing and starting the services
+- Checking Supervisord, Airflow, Metabase
+- Troubleshooting common issues
 
 ---
 
-## Cấu trúc thư mục
+## Directory Structure
 
 ```
 chainslake-onprem/
-├── chainslake-run/             # File thực thi và thư viện phụ thuộc
-│   ├── .env                    # Biến môi trường (copy từ env_example)
-│   ├── env_example             # File mẫu biến môi trường
-│   ├── chainslake-run.sh       # Lệnh spark-submit để chạy các job
-│   ├── chainslake-deps.jar     # Thư viện phụ thuộc
-│   └── chainslake.jar          # File thực thi chính (liên hệ Admin để lấy)
+├── chainslake-run/             # Executable files and dependency libraries
+│   ├── .env                    # Environment variables (copy from env_example)
+│   ├── env_example             # Environment variable template file
+│   ├── chainslake-run.sh       # spark-submit command to run jobs
+│   ├── chainslake-deps.jar     # Dependency libraries
+│   └── chainslake.jar          # Main executable (contact Admin to obtain)
 │
-├── chainslake/                 # Source code cấu hình và thực thi các job
-│   ├── jobs/                   # Script .sh cho từng job
+├── chainslake/                 # Source code for configuring and executing jobs
+│   ├── jobs/                   # .sh scripts for each job
 │   │   └── ethereum/
 │   │       ├── application.properties
 │   │       ├── origin/
 │   │       ├── extract/
 │   │       └── contract/
-│   ├── sql/                    # File .sql cho app sql.transformer
+│   ├── sql/                    # .sql files for the sql.transformer app
 │   │   ├── evm/
 │   │   └── evm_contract/
 │   ├── evm/
-│   │   └── abi/                # ABI của các EVM smart contract
+│   │   └── abi/                # ABIs of EVM smart contracts
 │   └── airflow/
-│       └── dags/               # Airflow DAG để build pipeline và schedule
+│       └── dags/               # Airflow DAGs to build pipelines and schedule
 │
-└── docker/                     # Cấu hình Docker Compose
-    ├── README.md               # Hướng dẫn cài đặt
+└── docker/                     # Docker Compose configuration
+    ├── README.md               # Installation guide
     ├── docker-compose.yml
     └── ...
 ```
 
-> **Lưu ý:** Cả hai thư mục `chainslake-run` và `chainslake` đều được mount vào `home/projects/` bên trong container `node01`. Xem chi tiết trong [docker/README.md](./docker/README.md).
+> **Note:** Both the `chainslake-run` and `chainslake` directories are mounted into `home/projects/` inside the `node01` container. See details in [docker/README.md](./docker/README.md).
 
 ---
 
-## Thư mục `chainslake-run`
+## The `chainslake-run` Directory
 
-Thư mục này chứa các thành phần cần thiết để thực thi các Spark job.
+This directory contains the components required to execute Spark jobs.
 
-### Cấu trúc
+### Structure
 
-| File/Thư mục | Mô tả |
+| File/Directory | Description |
 |---|---|
-| `env_example` | File mẫu chứa biến môi trường, cần copy thành `.env` và chỉnh sửa |
-| `.env` | File biến môi trường thực tế (không được commit lên git) |
-| `chainslake-run.sh` | Script wrapper cho lệnh `spark-submit`, là nền tảng cho mọi job |
-| `chainslake-deps.jar` | Thư viện phụ thuộc (Delta Lake, Hadoop connector, v.v.) |
-| `chainslake.jar` | File thực thi chính của Chainslake — **không nằm trong repo**, liên hệ Admin để lấy |
+| `env_example` | Template file containing environment variables; copy it to `.env` and edit |
+| `.env` | Actual environment variable file (must not be committed to git) |
+| `chainslake-run.sh` | Wrapper script for `spark-submit`, the foundation for every job |
+| `chainslake-deps.jar` | Dependency libraries (Delta Lake, Hadoop connector, etc.) |
+| `chainslake.jar` | Chainslake's main executable — **not included in the repo**, contact Admin to obtain it |
 
-### Thiết lập `.env`
+### Setting up `.env`
 
 ```bash
 cp chainslake-run/env_example chainslake-run/.env
-# Mở và chỉnh sửa các giá trị phù hợp với môi trường của bạn
+# Open and edit the values to match your environment
 ```
 
-File `.env` chứa các biến như danh sách RPC endpoint của các blockchain:
+The `.env` file contains variables such as the list of RPC endpoints for the blockchains:
 
 ```env
 ETHEREUM_RPCS=https://rpc.nodeflare.app/eth/public,...
 ```
 
-Các biến này được load vào môi trường trước khi chạy những job cần gọi trực tiếp đến RPC (ví dụ: các job trong thư mục `origin/`).
+These variables are loaded into the environment before running jobs that call RPC directly (e.g., the jobs in the `origin/` directory).
 
 ### `chainslake-run.sh`
 
-Script này là wrapper cho `spark-submit`, thiết lập sẵn các cấu hình Spark mặc định:
+This script is a wrapper for `spark-submit` and pre-configures the default Spark settings:
 
 ```bash
 spark-submit --master local[2] \
@@ -136,44 +136,44 @@ spark-submit --master local[2] \
     $CHAINSLAKE_RUN_DIR/chainslake.jar
 ```
 
-Mỗi script job sẽ gọi `chainslake-run.sh` và bổ sung thêm các tham số `--class`, `--name`, và `--conf` riêng của job đó.
+Each job script calls `chainslake-run.sh` and adds its own `--class`, `--name`, and `--conf` parameters.
 
 ---
 
-## Thư mục `chainslake`
+## The `chainslake` Directory
 
-Thư mục này chứa toàn bộ source code để cấu hình và điều phối các job xử lý dữ liệu.
+This directory contains all the source code to configure and orchestrate the data processing jobs.
 
 ---
 
-### `jobs` — Script thực thi
+### `jobs` — Execution Scripts
 
-Mỗi file `.sh` trong thư mục `jobs/` đại diện cho **một job**, và mỗi job sẽ ghi dữ liệu ra **một bảng** trong data warehouse.
+Each `.sh` file in the `jobs/` directory represents **one job**, and each job writes data to **one table** in the data warehouse.
 
-Cấu trúc thư mục `jobs/` được tổ chức theo chain và loại job:
+The `jobs/` directory is organized by chain and job type:
 
 ```
 jobs/
 └── ethereum/
-    ├── application.properties   # Cấu hình chung cho pipeline Ethereum
-    ├── origin/                  # Job lấy dữ liệu thô từ RPC node
+    ├── application.properties   # Common configuration for the Ethereum pipeline
+    ├── origin/                  # Jobs that fetch raw data from the RPC node
     │   ├── blocks_receipt.sh
     │   └── transaction_blocks.sh
-    ├── extract/                 # Job biến đổi dữ liệu thô thành bảng có cấu trúc
+    ├── extract/                 # Jobs that transform raw data into structured tables
     │   ├── blocks.sh
     │   ├── transactions.sh
     │   └── logs.sh
-    └── contract/                # Job decode dữ liệu contract
+    └── contract/                # Jobs that decode contract data
         └── decoded_log.sh
 ```
 
-Mỗi script `.sh` gọi đến `chainslake-run.sh` và chỉ định:
-- `--class`: Class Java/Scala cần thực thi
-- `--name`: Tên Spark application (dùng để nhận diện trên Spark UI)
-- `--conf spark.app_properties.app_name`: **App nào** sẽ được gọi (mỗi app có logic riêng)
-- `--conf spark.app_properties.config_file`: File `application.properties` của pipeline
+Each `.sh` script calls `chainslake-run.sh` and specifies:
+- `--class`: The Java/Scala class to execute
+- `--name`: The Spark application name (used for identification on the Spark UI)
+- `--conf spark.app_properties.app_name`: **Which app** to call (each app has its own logic)
+- `--conf spark.app_properties.config_file`: The pipeline's `application.properties` file
 
-**Ví dụ — `extract/blocks.sh`:**
+**Example — `extract/blocks.sh`:**
 
 ```bash
 $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.sql.Main \
@@ -183,7 +183,7 @@ $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.sql.Main \
     --conf "spark.app_properties.sql_file=evm/blocks.sql"
 ```
 
-**Ví dụ — `origin/blocks_receipt.sh`** (cần load `.env` vì dùng RPC):
+**Example — `origin/blocks_receipt.sh`** (needs to load `.env` because it uses RPC):
 
 ```bash
 export $(cat $CHAINSLAKE_RUN_DIR/.env) && $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.evm.Main \
@@ -193,55 +193,55 @@ export $(cat $CHAINSLAKE_RUN_DIR/.env) && $CHAINSLAKE_RUN_DIR/chainslake-run.sh 
     --conf "spark.app_properties.config_file=ethereum/application.properties"
 ```
 
-#### App `sql.transformer`
+#### The `sql.transformer` app
 
-Đây là app đặc biệt cho phép thực hiện một phép biến đổi dữ liệu thuần bằng SQL. Thay vì viết code Spark, bạn chỉ cần:
-1. Viết một file `.sql` chứa logic biến đổi
-2. Trỏ job đến file `.sql` đó qua tham số `sql_file`
+This is a special app that performs a data transformation purely with SQL. Instead of writing Spark code, you only need to:
+1. Write a `.sql` file containing the transformation logic
+2. Point the job to that `.sql` file via the `sql_file` parameter
 
-App này đọc các bảng input, thực thi SQL, và ghi kết quả ra bảng output — toàn bộ cấu hình nằm trong file `.sql`.
+This app reads the input tables, executes the SQL, and writes the result to the output table — all configuration lives in the `.sql` file.
 
 ---
 
-### `sql` — Logic biến đổi dữ liệu
+### `sql` — Data Transformation Logic
 
-Thư mục `sql/` chứa các file `.sql` được sử dụng bởi app `sql.transformer`. Mỗi file `.sql` gồm **hai phần** phân tách bởi dấu `===`:
+The `sql/` directory contains the `.sql` files used by the `sql.transformer` app. Each `.sql` file consists of **two parts** separated by `===`:
 
 ```
-<phần header — cấu hình job>
+<header part — job configuration>
 ===
-<phần body — logic SQL>
+<body part — SQL logic>
 ```
 
-#### Phần Header
+#### Header Part
 
-Phần header chứa các cấu hình dạng `key=value`. Hai cấu hình quan trọng nhất:
+The header part contains `key=value` configuration entries. The two most important ones:
 
-| Cấu hình | Mô tả |
+| Config | Description |
 |---|---|
-| `output_table` | Bảng mà job sẽ ghi dữ liệu vào |
-| `list_input_tables` | Danh sách các bảng mà job đọc dữ liệu từ (phân cách bằng dấu phẩy) |
+| `output_table` | The table the job writes data to |
+| `list_input_tables` | The list of tables the job reads data from (comma-separated) |
 
-Ngoài ra còn các cấu hình khác như `partition_by`, `write_mode`, `number_index_columns`, v.v.
+There are also other configs such as `partition_by`, `write_mode`, `number_index_columns`, etc.
 
-#### Phần Body
+#### Body Part
 
-Phần body chứa câu lệnh SQL để biến đổi từ bảng input ra bảng output.
+The body part contains the SQL statement that transforms the input tables into the output table.
 
-#### Biến động `${}`
+#### `${}` Dynamic Variables
 
-Trong file `.sql`, các giá trị động được đặt trong cú pháp `${}`. Các biến này được lấy từ:
-- Cấu hình của job (tham số `--conf`)
-- File `application.properties` mà job đang sử dụng
+In the `.sql` file, dynamic values are placed inside the `${}` syntax. These variables come from:
+- The job configuration (`--conf` parameters)
+- The `application.properties` file used by the job
 
-Hai biến đặc biệt do hệ thống tự tính toán:
+Two special variables are computed automatically by the system:
 
-| Biến | Mô tả |
+| Variable | Description |
 |---|---|
-| `${from}` | Block bắt đầu xử lý trong lần chạy hiện tại |
-| `${to}` | Block kết thúc xử lý trong lần chạy hiện tại |
+| `${from}` | The starting block processed in the current run |
+| `${to}` | The ending block processed in the current run |
 
-**Ví dụ — `sql/evm/blocks.sql`:**
+**Example — `sql/evm/blocks.sql`:**
 
 ```sql
 frequent_type=block
@@ -274,55 +274,55 @@ inner join blocks_receipt l
 on t.block_number = l.block_number
 ```
 
-Trong ví dụ này:
-- Input: `ethereum_origin.transaction_blocks` và `ethereum_origin.blocks_receipt`
+In this example:
+- Input: `ethereum_origin.transaction_blocks` and `ethereum_origin.blocks_receipt`
 - Output: `ethereum.blocks`
-- Biến `${chain_name}` được lấy từ `application.properties` (giá trị: `ethereum`)
-- Biến `${from}` và `${to}` được hệ thống tự tính theo tiến trình xử lý
+- The `${chain_name}` variable comes from `application.properties` (value: `ethereum`)
+- The `${from}` and `${to}` variables are computed by the system based on processing progress
 
 ---
 
-### `evm/abi` — ABI Contract
+### `evm/abi` — Contract ABI
 
-Thư mục `evm/abi/` chứa các file ABI (Application Binary Interface) của smart contract trên các EVM blockchain. Các file ABI này được sử dụng để decode dữ liệu log theo business logic của từng contract.
+The `evm/abi/` directory contains ABI (Application Binary Interface) files of smart contracts on EVM blockchains. These ABI files are used to decode log data according to each contract's business logic.
 
-**Ví dụ:** File `erc20.json` chứa ABI chuẩn của ERC-20 token, cho phép decode các event như `Transfer`, `Approval` từ raw log data.
+**Example:** The `erc20.json` file contains the standard ERC-20 token ABI, which allows decoding events such as `Transfer` and `Approval` from raw log data.
 
-Khi thêm một contract mới cần decode, bạn chỉ cần:
-1. Thêm file ABI của contract vào thư mục này
-2. Tạo job `decoded_log.sh` tương ứng và file `.sql` để xử lý logic decode
+When adding a new contract to decode, you only need to:
+1. Add the contract's ABI file to this directory
+2. Create the corresponding `decoded_log.sh` job and the `.sql` file to handle the decode logic
 
 ---
 
 ### `airflow/dags` — Pipeline & Scheduling
 
-Thư mục `airflow/dags/` chứa các **Airflow DAG** dùng để định nghĩa pipeline và lên lịch chạy job. Thông thường, tất cả các job của một blockchain được đặt chung trong một DAG.
+The `airflow/dags/` directory contains the **Airflow DAGs** used to define pipelines and schedule job runs. Typically, all jobs of a blockchain are placed together in one DAG.
 
-Airflow được truy cập tại:
+Airflow is accessible at:
 
 ```
 http://localhost:58080
 ```
 
-(Xem thông tin đăng nhập trong [docker/README.md](./docker/README.md))
+(See login credentials in [docker/README.md](./docker/README.md))
 
-**Ví dụ — `dags/ethereum.py`:**
+**Example — `dags/ethereum.py`:**
 
 ```python
 with DAG(
     "Ethereum",
-    schedule="10 0 * * *",   # Chạy lúc 0:10 mỗi ngày
+    schedule="10 0 * * *",   # Runs at 0:10 every day
     max_active_runs=1,
     max_active_tasks=10,
     is_paused_upon_creation=True,
 ) as dag:
 
-    # ORIGIN: Lấy dữ liệu thô từ RPC
+    # ORIGIN: Fetch raw data from RPC
     ethereum_origin_transaction_blocks = BashOperator(...)
     ethereum_origin_blocks_receipt = BashOperator(...)
     ethereum_origin_transaction_blocks >> ethereum_origin_blocks_receipt
 
-    # EXTRACT: Biến đổi thành bảng có cấu trúc
+    # EXTRACT: Transform into structured tables
     ethereum_blocks = BashOperator(...)
     ethereum_origin_blocks_receipt >> ethereum_blocks
 
@@ -335,17 +335,17 @@ with DAG(
     ethereum_logs >> ethereum_decoded_erc20_evt_transfer
 ```
 
-Thứ tự phụ thuộc giữa các task (toán tử `>>`) tạo thành một graph phụ thuộc rõ ràng. Các task không phụ thuộc nhau có thể chạy song song (giới hạn bởi `max_active_tasks`).
+The dependencies between tasks (using the `>>` operator) form a clear dependency graph. Tasks that do not depend on each other can run in parallel (limited by `max_active_tasks`).
 
-Việc bật/tắt từng DAG hoặc từng task được thực hiện trực tiếp trên giao diện Airflow.
+Enabling/disabling each DAG or task is done directly on the Airflow UI.
 
 ---
 
-### `application.properties` — Cấu hình pipeline
+### `application.properties` — Pipeline Configuration
 
-Mỗi pipeline (thư mục job của một chain) có một file `application.properties` riêng. File này chứa các cấu hình chung mà mọi job trong pipeline đều đọc khi khởi động.
+Each pipeline (the job directory of a chain) has its own `application.properties` file. This file contains the common configuration that every job in the pipeline reads at startup.
 
-**Ví dụ — `jobs/ethereum/application.properties`:**
+**Example — `jobs/ethereum/application.properties`:**
 
 ```properties
 chain_name=ethereum
@@ -357,38 +357,38 @@ max_retry=10
 wait_miliseconds=100
 ```
 
-#### Giải thích các cấu hình
+#### Configuration explanations
 
-| Cấu hình | Mô tả |
+| Config | Description |
 |---|---|
-| `chain_name` | Tên của blockchain. Thường được dùng làm **schema** cho các bảng trong data warehouse. Ví dụ: `output_table=${chain_name}.blocks` → bảng `ethereum.blocks` |
-| `number_block_per_partition` | Số block trong mỗi partition. Mỗi partition được xử lý bởi một luồng (thread/process). Nên chọn sao cho mỗi partition tương đương khoảng 1 giờ dữ liệu |
-| `max_number_partition` | Số partition tối đa được xử lý trong **một vòng lặp**. Có thể chạy song song hoặc tuần tự tùy thuộc vào số core và executor được cấp phát trong Spark. Sau mỗi vòng lặp, job ghi dữ liệu xuống bảng một lần |
-| `max_time_run` | Số vòng lặp tối đa trong **một lần chạy job** |
-| `run_mode` | `backward` hoặc `forward`. Xác định chiều xử lý dữ liệu: **backward** (từ hiện tại về quá khứ, ưu tiên dữ liệu mới nhất) hoặc **forward** (từ quá khứ đến hiện tại). Mỗi vòng lặp backward vẫn xử lý cả dữ liệu mới và dữ liệu cũ (theo hướng ngược lại) |
-| `start_number` / `end_number` | Phạm vi block cần xử lý. `-1` nghĩa là không giới hạn |
-| `max_retry` | Số lần thử lại tối đa khi một partition gặp lỗi |
-| `is_alert` | Bật/tắt cảnh báo khi job lỗi |
+| `chain_name` | The name of the blockchain. Usually used as the **schema** for the data warehouse tables. For example: `output_table=${chain_name}.blocks` → table `ethereum.blocks` |
+| `number_block_per_partition` | Number of blocks in each partition. Each partition is processed by one thread/process. Choose it so that each partition corresponds to roughly 1 hour of data |
+| `max_number_partition` | Maximum number of partitions processed in **one loop**. They can run in parallel or sequentially depending on the number of cores and executors allocated in Spark. After each loop, the job writes data to the table once |
+| `max_time_run` | Maximum number of loops in **one job run** |
+| `run_mode` | `backward` or `forward`. Determines the data processing direction: **backward** (from present to past, prioritizing the newest data) or **forward** (from past to present). Each backward loop still processes both new and old data (in reverse order) |
+| `start_number` / `end_number` | The range of blocks to process. `-1` means no limit |
+| `max_retry` | Maximum number of retries when a partition fails |
+| `is_alert` | Enables/disables alerts when a job fails |
 
-> Ngoài các cấu hình trên, từng job có thể có thêm các cấu hình đặc thù được mô tả riêng trong tài liệu của job đó.
+> In addition to the above, each job may have additional specific configurations described in that job's documentation.
 
 ---
 
-## Luồng hoạt động
+## Data Flow
 
-Dưới đây là luồng xử lý dữ liệu tổng quát trong một pipeline Chainslake:
+Below is the overall data processing flow in a Chainslake pipeline:
 
 ```
 RPC Node (Blockchain)
         │
         ▼
-  [origin jobs]          ← Lấy dữ liệu thô, lưu vào schema *_origin
+  [origin jobs]          ← Fetch raw data, store in the *_origin schema
         │
         ▼
-  [extract jobs]         ← Biến đổi và chuẩn hóa dữ liệu (dùng sql.transformer)
+  [extract jobs]         ← Transform and normalize data (using sql.transformer)
         │
         ▼
-  [contract/decode jobs] ← Decode smart contract events theo ABI
+  [contract/decode jobs] ← Decode smart contract events according to the ABI
         │
         ▼
   Data Warehouse (HDFS / Delta Lake)
@@ -397,72 +397,72 @@ RPC Node (Blockchain)
   Trino / SparkSQL → Metabase (BI & Visualization)
 ```
 
-Toàn bộ luồng này được điều phối bởi **Airflow DAG**, chạy theo lịch định sẵn và đảm bảo thứ tự phụ thuộc giữa các bước.
+The entire flow is orchestrated by **Airflow DAGs**, runs on a predefined schedule, and ensures the dependency order between the steps.
 
 ---
 
-## Ví dụ chi tiết: Pipeline Ethereum
+## Detailed Example: Ethereum Pipeline
 
-### Các bảng được tạo ra
+### Tables produced
 
-| Schema | Bảng | Mô tả |
+| Schema | Table | Description |
 |---|---|---|
-| `ethereum_origin` | `transaction_blocks` | Dữ liệu thô về block và transaction từ RPC |
-| `ethereum_origin` | `blocks_receipt` | Dữ liệu thô về block receipts từ RPC |
-| `ethereum` | `blocks` | Bảng block đã chuẩn hóa |
-| `ethereum` | `transactions` | Bảng transaction đã chuẩn hóa |
-| `ethereum` | `logs` | Bảng raw logs đã chuẩn hóa |
-| `ethereum_decoded` | `erc20_evt_transfer` | Event Transfer của ERC-20 token đã decode |
+| `ethereum_origin` | `transaction_blocks` | Raw block and transaction data from RPC |
+| `ethereum_origin` | `blocks_receipt` | Raw block receipt data from RPC |
+| `ethereum` | `blocks` | Normalized block table |
+| `ethereum` | `transactions` | Normalized transaction table |
+| `ethereum` | `logs` | Normalized raw logs table |
+| `ethereum_decoded` | `erc20_evt_transfer` | Decoded Transfer event of ERC-20 tokens |
 
-### Chạy thủ công một job
+### Running a job manually
 
-Để chạy thủ công một job (ví dụ: job `blocks`), SSH vào `node01` hoặc exec vào container:
+To run a job manually (e.g., the `blocks` job), SSH into `node01` or exec into the container:
 
 ```bash
 docker exec -it chainslake-onprem-node01-1 bash
 ```
 
-Sau đó:
+Then:
 
 ```bash
 cd /home/hadoop/projects/chainslake/jobs/ethereum
 ./extract/blocks.sh
 ```
 
-Hoặc có thể gọi trực tiếp từ bên ngoài qua lệnh sau:
+Or call it directly from outside with the following command:
 
 ```bash
 docker exec -u hadoop chainslake-onprem-node01-1 bash -c "export PS1='something' && source /etc/bash.bashrc && cd /home/hadoop/projects/chainslake/jobs/ethereum && ./extract/blocks.sh" 2>&1
 ```
 
-### Thêm một pipeline mới (ví dụ: BNB Chain)
+### Adding a new pipeline (e.g., BNB Chain)
 
-1. Tạo thư mục `chainslake/jobs/bnb/`
-2. Tạo file `application.properties` với `chain_name=bnb`
-3. Tạo các script `.sh` cho từng job (origin, extract, contract)
-4. Tạo DAG mới `chainslake/airflow/dags/bnb.py`
-5. Nếu cần decode contract mới, thêm ABI vào `chainslake/evm/abi/`
+1. Create the directory `chainslake/jobs/bnb/`
+2. Create an `application.properties` file with `chain_name=bnb`
+3. Create the `.sh` scripts for each job (origin, extract, contract)
+4. Create a new DAG `chainslake/airflow/dags/bnb.py`
+5. If a new contract needs decoding, add its ABI to `chainslake/evm/abi/`
 
 ---
 
-## Tool query dữ liệu trong Data warehouse
+## Data Warehouse Query Tools
 
-Để sử dụng tool query dữ liệu trong Data warehouse hãy tham khảo tài liệu sau:
+To use the Data Warehouse query tools, refer to the following documentation:
 
 📄 **[query/README.md](./query/README.md)**
 
-Hướng dẫn đó bao gồm:
-- Cài đặt thư viện
-- Cấu hình API Key
-- Danh sách các script và cách sử dụng:
-    - `get_example_table.py` — Lấy bản ghi mẫu từ bảng
-    - `query_table.py` — Thực thi câu truy vấn SQL
-    - `drop_table.py` — Xóa bảng
+That guide covers:
+- Library installation
+- API Key configuration
+- The list of scripts and how to use them:
+    - `get_example_table.py` — Fetch a sample record from a table
+    - `query_table.py` — Execute a SQL query
+    - `drop_table.py` — Drop a table
 
 ---
 
-## Liên hệ
+## Contact
 
-File `chainslake.jar` (file thực thi chính) **không được phân phối trong repo này**. Để lấy file này, vui lòng liên hệ với Admin của Chainslake.
+The `chainslake.jar` file (the main executable) is **not distributed in this repository**. To obtain this file, please contact the Chainslake Admin.
 
-Đối với các vấn đề kỹ thuật hoặc hỗ trợ cài đặt, vui lòng tạo issue trên repository này.
+For technical issues or installation support, please create an issue on this repository.

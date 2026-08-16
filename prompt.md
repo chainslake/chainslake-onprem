@@ -1,54 +1,54 @@
-Đọc file README.md để hiểu bối cảnh dự án
-- Tôi cần bảng dữ liệu ethereum_token.erc20_transfer, bảng này có input từ 2 bảng: ethereum.transactions, ethereum_decoded.erc20_evt_transfer
-- 2 bảng input sẽ được join với nhau theo block_number, tx_hash (từ transfer) - hash (transactions)
-- lấy tất cả các column của bảng transfer, lấy thêm các thông tin sau từ bảng transactions:
-    - from: đổi tên thành tx_from
-    - to: đổi tên thành tx_to 
-    - method_id: đổi tên thành tx_method_id
-- Yêu cầu code tuân thủ convention của dự án
-- Sau khi dev xong thì để tôi review code trước khi test job bằng cách run thủ công
+Read the README.md file to understand the project context
+- I need the ethereum_token.erc20_transfer data table, which takes input from 2 tables: ethereum.transactions, ethereum_decoded.erc20_evt_transfer
+- The 2 input tables will be joined on block_number, tx_hash (from transfer) - hash (transactions)
+- Take all columns of the transfer table, and also take the following information from the transactions table:
+    - from: rename it to tx_from
+    - to: rename it to tx_to 
+    - method_id: rename it to tx_method_id
+- The code must follow the project conventions
+- After development is done, let me review the code before testing the job by running it manually
 
 ===
 
-Đọc file README.md để hiểu bối cảnh dự án
-- Trong data warehouse hiện tại đang có bảng ethereum_token.erc20_transfer, tuy nhiên hiện tại bảng này chưa có thông tin về token_symbol tôi muốn bạn sửa code job của bảng này để bổ sung thêm input từ bảng ethereum_contract.erc20_tokens (join thông qua contract_address)
-- Kết quả thêm symbol và decimals từ erc20_tokens vào bảng erc20_transfer, ngoài ra tính lại value theo công thức sau:
+Read the README.md file to understand the project context
+- In the current data warehouse there is the ethereum_token.erc20_transfer table, however it does not yet have the token_symbol information. I want you to modify the job code of this table to add an additional input from the ethereum_contract.erc20_tokens table (join on contract_address)
+- Add the symbol and decimals from erc20_tokens to the erc20_transfer table, and also recalculate the value using the following formula:
     value = value * 10 ^ -decimals
-- Yêu cầu code tuân thủ convention của dự án
-- Sau khi dev xong thì để tôi review code trước khi test job bằng cách run thủ công
+- The code must follow the project conventions
+- After development is done, let me review the code before testing the job by running it manually
 
 ===
 
-- Tôi đã viết 1 script python get_example_table.py để lấy ra 1 bản ghi từ 1 bảng dữ liệu trong data warehouse để phục vụ mục đích lấy schema và example từ 1 bảng, tôi cần bạn viết thêm cho tôi một số script nữa như sau:
-    - Script drop 1 bảng dữ liệu, yêu cầu khi gọi script này sẽ cần người dùng confirm việc xóa
-    - Script thực thi 1 câu truy vấn trên data warehouse:
-        - cần kiểm tra nếu câu truy vấn nếu có thay đổi (xóa, sửa) thì sẽ bị chặn không được thực hiện
-        - câu truy vấn yêu cầu phải có limit số bản ghi trả về
-- Sau khi làm xong hãy viết cho tôi 1 file README.md hướng dẫn sử dụng cho cả 3 script (bao gồm script get_example_table.py)
+- I have written a Python script get_example_table.py to retrieve 1 record from a data table in the data warehouse, in order to get the schema and an example from a table. I need you to write a few more scripts as follows:
+    - A script to drop a data table; calling this script must require the user to confirm the deletion
+    - A script to execute a query on the data warehouse:
+        - it must check that if the query modifies data (delete, update), it is blocked from execution
+        - the query must have a limit on the number of records returned
+- After finishing, write me a README.md file with usage instructions for all 3 scripts (including the get_example_table.py script)
 
 ===
 
-Đọc file README.md để hiểu bối cảnh dự án
-- Tôi muốn một Data Agent có thể giúp tôi maintain dự án này, có khả năng tự động học hỏi, làm giàu kỹ năng theo thời gian. Hãy viết cho tôi một AGENT_INSTRUCTION.md để làm điểm bắt đầu cho Agent này.
-- Ngoài các thư mục thuộc dự án này, Agent được quản lý thêm 2 thư mục nữa:
-    - script: Đây là thư mục chứa các python script .py và 1 file index.md chứa thông tin mô tả ngắn gọn về mỗi script trong thư mục
-        - Trong quá trình làm việc, nếu Agent thấy rằng có nhiệm vụ nào đó lặp lại hoặc cần những tool đặc biệt (ví dụ call api...) nó sẽ tự động viết script python đó để sử dụng, sau đó đưa mô tả ngắn gọn về tool đó vào file index.md để lần sau chỉ cần đọc file index.md là có thể tái sử dụng lại script này mà không cần viết lại. 
-    - skill: Đây là nơi chứa skill hay chính là kinh nghiệm của Agent trong quá trình làm việc, mỗi skill là 1 file .md và có 1 file index.md chứa mô tả ngắn gọn về tất cả các skill
-        - Trong quá trình sử dụng, người dùng sẽ viết prompt để yêu cầu agent thực thi nhiệm vụ, sau khi thực thi xong nhiệm vụ thành công, Agent sẽ chủ động viết lại skill cho nhiệm vụ đó, để lần sau khi người dùng yêu cầu, Agent có thể thực hiện ngay mà không cần hướng dẫn của người dùng nữa
-- toàn bộ script và skill đều do Agent chủ động và tự động viết mà không cần sự yêu cầu trực tiếp từ người dùng, múc đích là để Agent tự làm giàu tool và kỹ năng từ đó phục vụ người dùng tốt hơn.
+Read the README.md file to understand the project context
+- I want a Data Agent that can help me maintain this project, with the ability to learn automatically and enrich its skills over time. Please write an AGENT_INSTRUCTION.md for me as the starting point for this Agent.
+- In addition to the directories of this project, the Agent also manages 2 more directories:
+    - script: This directory contains .py Python scripts and 1 index.md file with a short description of each script in the directory
+        - While working, if the Agent finds that a task is repetitive or requires special tools (e.g. calling an API...), it will automatically write that Python script for reuse, then add a short description of the tool to the index.md file so that next time it only needs to read the index.md file to reuse the script without rewriting it. 
+    - skill: This is where skills, i.e. the Agent's experience accumulated during work, are stored; each skill is a .md file and there is an index.md file containing short descriptions of all the skills
+        - In use, the user will write a prompt to ask the agent to execute a task; after the task is completed successfully, the Agent will proactively write a skill for that task, so that next time the user asks, the Agent can do it immediately without the user's guidance
+- All scripts and skills are written proactively and automatically by the Agent without direct requests from the user, with the aim of letting the Agent enrich its own tools and skills to better serve the user.
 
 ===
 
-Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
-- Nhiệm vụ của bạn là giúp tôi xây dựng một data pipeline mới cho BNB chain, làm tương tự như ethereum
-- Để BNB chain có thể hoạt động được thì bạn cần phải tìm được danh sách RPC để đưa vào file chainslake-run/.env (tương tự như ETHEREUM_RPCS)
-    - Cách làm như sau:
-        - Lấy danh sách các rpc free từ trang: https://chainlist.org/rpcs.json
-        - Lấy danh sách RPC ở chain name: BNB Smart Chain Mainnet
-        - với mỗi RPC cần kiểm tra xem RPC đó có đáp ứng được yêu cầu sử dụng hay không bằng cách call thử các api sau:
-            - API lấy latest block
+Read the AGENT_INSTRUCTION.md file to understand the context
+- Your task is to help me build a new data pipeline for the BNB chain, similar to ethereum
+- For the BNB chain to work, you need to find a list of RPCs to add to the chainslake-run/.env file (similar to ETHEREUM_RPCS)
+    - Here is the approach:
+        - Get the list of free RPCs from the site: https://chainlist.org/rpcs.json
+        - Get the RPC list for the chain name: BNB Smart Chain Mainnet
+        - For each RPC, check whether it meets the usage requirements by calling the following APIs as a test:
+            - API to get the latest block
             ```sh
-            curl -X POST "<<RPC cần kiểm tra>>" \
+            curl -X POST "<<RPC to check>>" \
                 -H "Content-Type: application/json" \
                 -d '{
                 "jsonrpc": "2.0",
@@ -57,7 +57,7 @@
                 "id": 1
             }'
             ```
-            output cần trả về ví dụ như sau:
+            The output should be returned like the following example:
             ```json
             {
                 "jsonrpc": "2.0",
@@ -65,9 +65,9 @@
                 "result": "0x15536ee"
             }
             ```
-            - API lấy transaction_blocks (dùng cho bảng _origin.transaction_blocks), lấy result từ bước trên để gọi api
+            - API to get transaction_blocks (used for the _origin.transaction_blocks table); use the result from the previous step to call the API
             ```sh     
-            curl -X POST "<<RPC cần kiểm tra>>" \
+            curl -X POST "<<RPC to check>>" \
             -H "Content-Type: application/json" \
             -d '{
             "jsonrpc": "2.0",
@@ -79,7 +79,7 @@
             "id": 1
             }'
             ```
-            Verify kết quả trả về có format như sau:
+            Verify that the returned result has the following format:
             ```json
             {
                 "result": {
@@ -120,9 +120,9 @@
                 }
             }
             ```
-            - API lấy blocks receipt dùng cho bảng origin.blocks_receipt, lấy latest block để gọi api
+            - API to get blocks receipt, used for the origin.blocks_receipt table; use the latest block to call the API
             ```sh
-            curl -X POST "<<RPC cần check>>" \
+            curl -X POST "<<RPC to check>>" \
             -H "Content-Type: application/json" \
             -d '{
             "jsonrpc": "2.0",
@@ -133,7 +133,7 @@
             "id": 1
             }'
             ```
-            Verify kết quả trả về có format như sau:
+            Verify that the returned result has the following format:
             ```json
             {
                 "result": Array[{
@@ -165,48 +165,48 @@
                 }]
             }
             ```
-    - Các RPC sau khi pass check thì sẽ được đưa vào BNB_RPCS để job sử dụng
+    - After passing the check, the RPCs will be added to BNB_RPCS for the job to use
 
 === 
 
-Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
-- Hãy cài đặt Chainslake data warehouse
-- hãy giúp tôi setup tài khoản admin cho Metabase luôn, 
-- Tiếp theo sau đó start workflow của Ethereum (chỉ chạy 1 lần)
-- Kiểm tra dữ liệu sau của các bảng sau khi chạy
+Read the AGENT_INSTRUCTION.md file to understand the context
+- Install the Chainslake data warehouse
+- Also help me set up the admin account for Metabase, 
+- Then start the Ethereum workflow (run it only once)
+- Check the data of the tables after running
 
-- Tôi tin rằng bạn đã có nhiều kinh nghiệm khi xử lý nhiệm vụ này, vì vậy hãy viết lại chúng thành script và skill để sử dụng về sau
-- Tôi nghĩ rằng mật khẩu và account login vào metabase không nên được hard trực tiếp vào trong script như vậy, hãy bỏ nó vào file .env, đừng quên cho vào .gitignore để không đẩy thông tin nhạy cảm lên git
-
-===
-
-Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
-- Tôi muốn bạn viết cho tôi một số tool query để hỗ trợ maintain cho datawarehouse như sau:
-    - tool kiểm tra properties của bảng:
-        - Cách thực hiện: gọi query sql sử dụng engine spark: "show tblproperties <tên bảng>"
-        - Kết quả sẽ cho biết các thuộc tính của bảng này, trong đó có các thuộc tính quan trọng sau:
-            - isLock: Cho biết bảng có đang bị khóa không (giá trị 1 hoặc 0), đảm bảo tại 1 thời điểm chỉ có 1 job được ghi data vào bảng, nếu 1 job ghi vào bảng đang log sẽ báo lỗi Table is Lock
-            - frequenceType: frequenceType của bảng, có thể nhận 1 trong các giá trị: block, hour, minute, day
-            - fromBlock, toBlock: Nếu frequenceType là block thì sẽ có 2 giá trị này, 
-                - cho biết bảng đang có data từ block nào đến block nào
-                - các giá trị này chỉ được update xuống nếu việc ghi thành công (đảm bảo dữ liệu chính xác cho downstream sử dụng)
-                - các job downstream sẽ dựa vào fromBlock và toBlock để tính toán giá trị from, to phù hợp khi chạy
-            - fromEpochSecond, toEpochSecond: tính năng tương tự như fromBlock, toBlock nhưng dùng cho các bảng có frequenceType là minute, hour, day. sử dụng đơn vị giây (Second) thay vì block
-    - tool mở khóa bảng:
-        - Cách thực hiện: gọi sql sử dụng engine spark: "alter table <tên bảng> set tblproperties (isLock=0)"
-        - Lưu ý:
-            - tool được sử dụng khi job ghi dữ liệu vào bảng bị lỗi, khi chạy lại báo lỗi Table is Lock (do bảng chưa được mở khóa ở lần chạy trước)
-            - chỉ sử dụng tool này khi biết chắc chắn không còn job nào đang ghi dữ liệu vào bảng
+- I believe you have gained a lot of experience handling this task, so please write them down as scripts and skills for future use
+- I think the password and the login account for Metabase should not be hard-coded directly in the script like that; put them in the .env file, and don't forget to add it to .gitignore so sensitive information is not pushed to git
 
 ===
 
-Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
-- Tôi cần upload file data/eth_etf_address.csv vào data warehouse, các bước làm như sau:
-    - Tạo 1 schema mới với tên là ext_upload (nếu chưa có) sử dụng query engine spark:
+Read the AGENT_INSTRUCTION.md file to understand the context
+- I want you to write some query tools to support maintaining the data warehouse as follows:
+    - Tool to check the properties of a table:
+        - How it works: run a SQL query using the spark engine: "show tblproperties <table name>"
+        - The result shows the properties of the table, including these important ones:
+            - isLock: Indicates whether the table is locked (value 1 or 0), ensuring that only 1 job writes data to the table at a time; if a job writes to a locked table it will report the error Table is Lock
+            - frequenceType: The frequenceType of the table, which can be one of the following values: block, hour, minute, day
+            - fromBlock, toBlock: If the frequenceType is block, these 2 values will exist, 
+                - they indicate the range of blocks that the table currently holds data for
+                - these values are only updated if the write succeeds (ensuring accurate data for downstream consumers)
+                - downstream jobs rely on fromBlock and toBlock to compute the appropriate from and to values when running
+            - fromEpochSecond, toEpochSecond: similar to fromBlock and toBlock but used for tables whose frequenceType is minute, hour, day. They use seconds as the unit instead of blocks
+    - Tool to unlock a table:
+        - How it works: run SQL using the spark engine: "alter table <table name> set tblproperties (isLock=0)"
+        - Notes:
+            - this tool is used when a job writing data to a table fails, and re-running it reports the error Table is Lock (because the table was not unlocked on the previous run)
+            - only use this tool when you are sure that no job is still writing data to the table
+
+===
+
+Read the AGENT_INSTRUCTION.md file to understand the context
+- I need to upload the file data/eth_etf_address.csv into the data warehouse, following these steps:
+    - Create a new schema named ext_upload (if it does not exist yet) using the spark query engine:
         SQL: `create schema ext_upload`
-    - Copy file vào node01 sau đó sử dụng hdfs put (bên trong docker node01) để đẩy nó lên hdfs
+    - Copy the file to node01, then use hdfs put (inside the docker node01) to push it to hdfs
         script: `hdfs dfs -put eth_etf_address.csv /user/hive/warehouse/ext_upload.db/eth_etf_address/`
-    - Tạo table, sử dung SQL với engine spark:
+    - Create the table using SQL with the spark engine:
        ```sql
        CREATE EXTERNAL TABLE ext_upload.eth_etf_address (
             issuer STRING,
@@ -224,106 +224,106 @@
         STORED AS TEXTFILE
         LOCATION 'hdfs:///user/hive/warehouse/ext_upload.db/eth_etf_address/';
        ``` 
-    - query thử bảng xem đã được chưa
-- Sau khi xong thì viết lại skill, script để tái sử dụng
-- vì thư mục chainslake đã được mount vào trong node01 rồi, nên có thể bỏ qua bước copy vào node01
-- thay vào đó hãy tạo 1 thư mục mới là ext_upload trong thư mục chainslake, để người dùng bỏ file họ muốn upload lên vào đó
+    - Query the table to verify it works
+- After finishing, write the skills and scripts for reuse
+- since the chainslake directory is already mounted into node01, the step of copying into node01 can be skipped
+- instead, create a new directory called ext_upload inside the chainslake directory, so users can drop the files they want to upload there
 
 ===
 
-- Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
-- Hiện tại tôi đang thấy rằng các script và skill để làm tương tác với airflow đang được thực hiện thông qua call HTTP request, tôi nghĩ rằng đây không phải là cách tối ưu dành cho agent, tôi muốn bạn review và sửa lại để sử dụng Airflow CLI
+- Read the AGENT_INSTRUCTION.md file to understand the context
+- Currently I see that the scripts and skills for interacting with airflow are implemented through HTTP requests; I think this is not the optimal approach for the agent, so I want you to review and fix them to use the Airflow CLI
 
 ===
 
-- Đọc file AGENT_INSTRUCTION.md để nắm được bối cảnh
-- Thực hiện setup metabase
-- Tôi muốn thực hiện việc nâng cấp metabase lên phiên bản mới nhất, để Agent có thể sử dụng metabase cli, bạn có thể xóa database metabase cũ trong postgres và tạo lại database mới và set up lại từ đầu sử dụng metabase cli
-- update lại skill và script sử dụng metabase cli
+- Read the AGENT_INSTRUCTION.md file to understand the context
+- Perform the metabase setup
+- I want to upgrade metabase to the latest version so the Agent can use the metabase cli; you can delete the old metabase database in postgres, create a new database, and set everything up from scratch using the metabase cli
+- update the skills and scripts to use the metabase cli
 
 === 
 
-- Tôi muốn bạn viết một skill mới để thực hiện việc cấu hình các tham số cho job hoặc pipeline
-- Đây là một nhiệm vụ khó, tuy nhiên rất quan trọng nên bạn cần hiểu rõ và viết lại rõ ràng.
-- Nhắc lại về một số tham số cấu hình quan trọng của job:
-    - number_block_per_partition: số block cho mỗi partition
-    - max_number_partition: Số partition được xử lý trong mỗi vòng lặp
-    - max_time_run: Số vòng lặp trong 1 lần chạy job
-- Các tham số này có thể được cấu hình trong file application.properties, hoặc cấu hình trực tiếp trong file .sh của job thông qua config, ví dụ: --conf "spark.app_properties.max_number_partition=24", nếu có cả ở 2 nơi thì job sẽ ưu tiên sử dụng giá trị trong file .sh
-- Cách chọn tham số:
+- I want you to write a new skill for configuring parameters for a job or pipeline
+- This is a difficult but very important task, so you need to understand it thoroughly and write it out clearly.
+- Recapping some important configuration parameters of a job:
+    - number_block_per_partition: the number of blocks per partition
+    - max_number_partition: the number of partitions processed in each iteration
+    - max_time_run: the number of iterations in a single job run
+- These parameters can be configured in the application.properties file, or directly in the job's .sh file via config, e.g.: --conf "spark.app_properties.max_number_partition=24"; if set in both places, the job prioritizes the value in the .sh file
+- How to choose the parameters:
     - number_block_per_partition:
-        - sẽ được chọn riêng cho mỗi chain sao cho mỗi partition sẽ có lượng data khoảng 1 giờ dữ liệu (cần lấy nhiều hơn 1 chút). Có thể tính toán con số này dựa vào các thông tin lấy được từ Internet, tuy nhiên sau đó cần tính toán lại dựa trên block_number và block_time bằng cách count số block trong 1 giờ từ bảng transaction_blocks (lưu ý cần đảm bảo có đủ data trong 1 giờ)
-        - Cách tốt nhất là khi setup mới 1 chain, hãy lấy giá trị number_block_per_partition theo thông tin từ Internet, sau đó set max_number_partition và max_time_run rồi chạy job 1 đến 2 lần, sau đó thực hiện tính toán lại số number_block_per_partition cho chính xác (nhớ là cần lấy nhiều hơn 1 chút lý tưởng là 5%, vì số block mỗi giờ của chain thường không cố định).
+        - it will be chosen per chain so that each partition holds about 1 hour of data (needs to be a bit more). This number can be estimated from information found on the Internet, but afterwards it must be recalculated based on block_number and block_time by counting the number of blocks in 1 hour from the transaction_blocks table (note that you must ensure there is enough data for 1 hour)
+        - The best approach when setting up a new chain is to take the number_block_per_partition value from information on the Internet, then set max_number_partition and max_time_run and run the job 1 to 2 times, then recalculate the number_block_per_partition for accuracy (remember to take a bit more, ideally 5%, because the number of blocks per hour of a chain is usually not fixed).
     - max_number_partition:
-        - tham số này cho biết có bao nhiêu partitions được xử lý trong 1 vòng lặp, con số này cần được điều chỉnh để phù hợp với lượng tài nguyên (số thread và lượng memory cung cấp) được cung cấp cho job đó
-        - Tài nguyên sẽ được cấp phát dựa vào 2 tham số sau đây của job:
-            --master local[2] \ số threads càn nhiều thì sẽ càng có nhiều partitions được xử lý đồng thời
-            --driver-memory 4g \ memory cung cấp cần phải nhiều hơn dung lượng data đọc (nếu có) + dung lượng data ghi của job
-        - Để tính được memory cần dùng cho job, bạn cần tính xem 1 partition dữ liệu trên bảng có dung lượng bao nhiêu, bằng cách sử dụng câu SQL sau:
-            `describe detail <tên bảng>` Sau đó tìm sizeInBytes để biết kích thước thực tế của bảng
-        - Lưu ý quan trọng: Đối với các job sử dụng frequent_type là day thì max_number_partition phải >= 24 
-    - max_time_run: cho biết số vòng lặp trong 1 lần chạy dữ liệu, hợp lý nhất là chọn sao cho 1 lần chạy xử lý được 1 ngày dữ liệu
-- Cấu hình DAG
-    - start_date: hãy đặt bằng ngày bắt đầu của chain, ví dụ với Ethereum là ngày 30/07/2015
-    - is_paused_upon_creation=True: Để DAG luôn off khi khởi động
-    - catchup=False: Để DAG sẽ ko tự động chạy các ngày history
-- Lưu ý: Nếu người dùng yêu cầu có data từ 
-- Mặc định chúng ta sẽ cấu hình run_mode của cả pipeline là backward, tức là chạy ngược từ hiện tại về quá khứ, sau khi đã đủ dữ liệu đến ngày người dùng cần thì cần chuyển lại cấu hình này về forward. Tuy nhiên thay vì chuyển run_mode thành forward cho tất cả các job trên pipeline thì bạn chỉ cần thay đổi cấu hình này tại job đầu tiên trong pipeline tức là job _origin.transaction_blocks vì khi job này đã bị dừng chạy ngược, các job phía sau dù có backward cũng không thể chạy tiếp về quá khứ được nữa (vì ko có data). Lưu ý rằng cấu hình backward sẽ cho phép job chạy cả tiến và lùi, trong khi forward chỉ cho phép chạy tiến.
-- Khi thêm 1 job mới vào DAG, giả sử lúc này DAG đã hoàn thành chạy dữ liệu về quá khứ, như vậy job mới thêm vào phải tự chạy về quá khứ, bạn hãy sử dụng Airflow CLI để chạy backfill cho riêng job mới này.
+        - this parameter indicates how many partitions are processed in 1 iteration; it needs to be adjusted to fit the amount of resources (number of threads and memory provided) allocated to the job
+        - Resources are allocated based on the following 2 parameters of the job:
+            --master local[2] \ the more threads, the more partitions processed concurrently
+            --driver-memory 4g \ the memory provided must be larger than the data read volume (if any) + the data write volume of the job
+        - To compute the memory needed for the job, you need to determine the size of 1 data partition in the table, using the following SQL:
+            `describe detail <table name>` Then look for sizeInBytes to know the actual size of the table
+        - Important note: for jobs whose frequent_type is day, max_number_partition must be >= 24 
+    - max_time_run: indicates the number of iterations in one data run; the most reasonable choice is one that lets a single run process 1 day of data
+- DAG configuration
+    - start_date: set it to the chain's start date, e.g. for Ethereum it is 30/07/2015
+    - is_paused_upon_creation=True: so the DAG is always off on startup
+    - catchup=False: so the DAG does not automatically run historical days
+- Note: If the user requests data from 
+- By default, we configure the run_mode of the entire pipeline as backward, i.e. running backwards from the present to the past; once there is enough data up to the day the user needs, this configuration must be switched back to forward. However, instead of switching run_mode to forward for all jobs in the pipeline, you only need to change this configuration on the first job in the pipeline, i.e. the _origin.transaction_blocks job, because once this job stops running backwards, the downstream jobs cannot continue further into the past even with backward (because there is no data). Note that the backward configuration allows a job to run both forward and backward, while forward only allows running forward.
+- When adding a new job to the DAG, assuming the DAG has already finished backfilling data into the past, the newly added job must itself run back into the past; use the Airflow CLI to run a backfill for just this new job.
     
 ===
 
-Hãy viết cho tôi phần hướng dẫn cài đặt thành 1 skill, để Agent không cần đọc file docker/README.md nữa (vì đây là doc dành cho người dùng)
+Please write the installation instructions as a skill, so the Agent no longer needs to read the docker/README.md file (since this is a document for users)
 
 ===
 
-Hãy config giúp tôi để mỗi lần mở opencode lên thì toàn bộ log OPENCODE_LOG_LEVEL=TRACE sẽ được ghi ra file opencode.log của thư mục này 
+Please configure it for me so that every time opencode is opened, all logs with OPENCODE_LOG_LEVEL=TRACE are written to the opencode.log file in this directory 
 
 ===
 
-- Tôi muốn chỉnh sửa lại skill Configure Job/Pipeline Parameters như sau:
-    - tại bước 4: Cấu hình `start_date` trên DAG
-        - Cấu hình start_date mặc định là thời điểm 2 năm kể từ ngày hiện tại
-        - phải bổ sung thêm cấu hình catchup=False để DAG không tự động chạy lại từ ngày start_date, vì đã có bước 6 để chạy backfill rồi
+- I want to modify the Configure Job/Pipeline Parameters skill as follows:
+    - in step 4: Configure `start_date` on the DAG
+        - Configure the default start_date to be 2 years from the current date
+        - must add the catchup=False configuration so the DAG does not automatically run again from the start_date, since step 6 already runs the backfill
 
 === 
 
-Tôi muốn bạn bổ sung thêm mục Use case trong AGENT_INSTRUCTION.md, để hướng dẫn nhanh cho Agent biết cần gọi các skill nào trong các tình huống sử dụng cụ thể, Use case cũng sẽ được Agent tự động update trong quá trình sử dụng. Sau đây là 1 số Use case:
-    - Bắt đầu:
-        - Kiểm tra xem hệ thống đã được cài đặt hay chưa? nếu chưa thì hỏi người dùng xem có muốn cài đặt ngay không
-        - Nếu đã cài đặt rồi thì kiểm tra xem hệ thống đã được bật lên chưa, toàn bộ service đã hoạt động đầy đủ chưa, nếu chưa thì hỏi người dùng có muốn bật hệ thống lên không
-    - Cài đặt hệ thống:
-        - Sử dụng skill: Cài đặt Chainslake On-Premises
-        - Sau khi cài đặt và khởi động xong thì cho người dùng biết đang có những chain nào đang có sẵn
-        - Hỏi người dùng xem họ muốn chạy chain nào hoặc muốn setup một chain mới hay không
-    - Setup một chain mới:
-        - Sử dụng skill: Add New Chain Pipeline (cần hỏi người dùng xem họ muốn setup chain nào)
-        - Sử dụng skill: Configure Job/Pipeline Parameters 
-            - Xác định các tham số cấu hình cần thiết cho chain mới
+I want you to add a Use case section to AGENT_INSTRUCTION.md to give the Agent quick guidance on which skills to call in specific usage scenarios. The Use case section will also be updated automatically by the Agent during use. Here are some Use cases:
+    - Starting:
+        - Check whether the system has been installed; if not, ask the user if they want to install it right away
+        - If it is installed, check whether the system has been started and all services are fully running; if not, ask the user if they want to start the system
+    - Installing the system:
+        - Use the skill: Install Chainslake On-Premises
+        - After installation and startup are complete, let the user know which chains are currently available
+        - Ask the user which chain they want to run or whether they want to set up a new chain
+    - Setting up a new chain:
+        - Use the skill: Add New Chain Pipeline (ask the user which chain they want to set up)
+        - Use the skill: Configure Job/Pipeline Parameters 
+            - Determine the configuration parameters needed for the new chain
 
 ===
 
-- Tôi cần bạn viết một script mới để lấy thông tin hiện trạng về các bảng dữ liệu đang có trong warehouse để cho vào thư mục catalog của dự án này
-- Các bước làm như sau:
-    - Lấy danh sách tất cả các bảng trong warehouse
-        - vì không có câu lệnh SQL nào có thể lấy được hết tất cả bảng nên script cần thực thi 2 câu truy vấn sau
-            - `show schemas`: Lấy danh sách tất cả schema trong warehouse (cần bỏ qua schema default)
-            - `show tables in [schema_name]`: Lấy danh sách tất cả table trong schema
-    - Với mỗi table script cần lấy các thông tin sau:
-        - schema của bảng (danh sách column và type) và ví dụ dữ liệu, hãy sử dụng script có sẵn
-        - thông tin thuộc tính của bảng, sử dụng script có sẵn
-            - Các thuộc tính cần lấy bao gồm:   
+- I need you to write a new script that collects the current status information of the data tables in the warehouse and puts it into the catalog directory of this project
+- Here are the steps:
+    - Get the list of all tables in the warehouse
+        - since there is no single SQL statement that can retrieve all tables, the script needs to run the following 2 queries
+            - `show schemas`: get the list of all schemas in the warehouse (skip the default schema)
+            - `show tables in [schema_name]`: get the list of all tables in the schema
+    - For each table, the script needs to collect the following information:
+        - the table schema (list of columns and types) and an example of the data, using the existing script
+        - the table properties, using the existing script
+            - The properties to collect include:   
                 - frequentType
                 - fromBlock
                 - toBlock
                 - fromEpochSecond
                 - toEpochSecond
-                - listInputTables: cho biết danh sách bảng upstream của bảng này
-                - sqlSource: SQL transform của bảng (nếu có)
-                - abi: ABI sử dụng trong bảng (nếu có)
-        - Các thông tin sizing của bảng
-            - số lượng bản ghi hiện tại: sử dụng `select count(*) from [table_name]` để đếm số bản ghi
-            - ngày tạo, ngày update, dung lượng (sizeInBytes), số file: Sử dụng `describe detail [table_name]` để lấy
-    - Tổng hợp thông tin của mỗi bảng thành 1 tài liệu với tên file là [schema].[table_name].md sử dụng mẫu tại table_template.md
-    - Tổng hợp tất cả thông tin về upstream và downstream của tất cả các bảng để tạo 1 tài liệu với tên là lineage.md (cũng đặt trong thư mục catalog) trong tài liệu này thể hiện sự phụ thuộc (lineage) của tất cả các bảng dưới dạng graph trực quan 
+                - listInputTables: indicates the list of upstream tables of this table
+                - sqlSource: the SQL transform of the table (if any)
+                - abi: the ABI used in the table (if any)
+        - Table sizing information
+            - the current number of records: use `select count(*) from [table_name]` to count the records
+            - creation date, update date, size (sizeInBytes), number of files: use `describe detail [table_name]` to get them
+    - Compile the information of each table into a document named [schema].[table_name].md using the template in table_template.md
+    - Compile all upstream and downstream information of all tables to create a document named lineage.md (also placed in the catalog directory); this document shows the dependencies (lineage) of all tables as a visual graph 
             

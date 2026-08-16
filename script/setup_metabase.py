@@ -1,8 +1,8 @@
 """
-Setup Metabase on-premise: tạo admin account, kết nối SparkSQL và Trino,
+Set up Metabase on-premise: create admin account, connect SparkSQL and Trino,
 authenticate Metabase CLI.
 
-Đọc credentials từ script/.env (xem script/env_example).
+Read credentials from script/.env (see script/env_example).
 
 Usage:
     python script/setup_metabase.py [--skip-databases] [--skip-cli]
@@ -21,7 +21,7 @@ load_dotenv("script/.env")
 
 
 def wait_for_metabase(base_url, timeout=120):
-    """Đợi Metabase sẵn sàng."""
+    """Wait for Metabase to be ready."""
     print("[1/5] Waiting for Metabase to be ready...")
     start = time.time()
     while time.time() - start < timeout:
@@ -38,7 +38,7 @@ def wait_for_metabase(base_url, timeout=120):
 
 
 def check_already_setup(base_url):
-    """Kiểm tra xem Metabase đã có admin chưa."""
+    """Check whether Metabase already has an admin."""
     r = requests.get(f"{base_url}/api/session/properties", timeout=10)
     if r.status_code == 200:
         return r.json().get("has-user-setup", False)
@@ -46,7 +46,7 @@ def check_already_setup(base_url):
 
 
 def setup_admin(base_url, email, password, site_name):
-    """Tạo admin account qua /api/setup."""
+    """Create an admin account via /api/setup."""
     print("[2/5] Setting up admin account...")
 
     props = requests.get(f"{base_url}/api/session/properties", timeout=10).json()
@@ -81,7 +81,7 @@ def setup_admin(base_url, email, password, site_name):
 
 
 def login(base_url, email, password):
-    """Login và trả về session token."""
+    """Log in and return the session token."""
     print("[2/5] Logging in...")
     r = requests.post(
         f"{base_url}/api/session",
@@ -98,7 +98,7 @@ def login(base_url, email, password):
 
 
 def create_api_key(base_url, session_id, key_name="chainslake-agent"):
-    """Tạo API key cho automation."""
+    """Create an API key for automation."""
     print("[3/5] Creating API key...")
     headers = {"Content-Type": "application/json", "X-Metabase-Session": session_id}
     r = requests.post(
@@ -117,7 +117,7 @@ def create_api_key(base_url, session_id, key_name="chainslake-agent"):
 
 
 def add_database(base_url, session_id, engine, name, details):
-    """Thêm database connection."""
+    """Add a database connection."""
     headers = {"Content-Type": "application/json", "X-Metabase-Session": session_id}
     payload = {
         "engine": engine,
@@ -136,7 +136,7 @@ def add_database(base_url, session_id, engine, name, details):
 
 
 def add_databases(base_url, session_id):
-    """Thêm SparkSQL và Trino."""
+    """Add SparkSQL and Trino."""
     print("[4/5] Adding database connections...")
 
     add_database(base_url, session_id, "sparksql", "Spark", {
@@ -157,10 +157,10 @@ def add_databases(base_url, session_id):
 
 
 def setup_cli(base_url, api_key):
-    """Authenticate Metabase CLI (`mb`) với API key."""
+    """Authenticate the Metabase CLI (`mb`) with the API key."""
     print("[5/5] Setting up Metabase CLI...")
 
-    # Kiểm tra mb có cài không
+    # Check whether mb is installed
     try:
         result = subprocess.run(
             ["mb", "--version"],

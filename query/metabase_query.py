@@ -6,7 +6,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(script_dir, '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
-# Database IDs trong Metabase (thay đổi nếu setup lại từ đầu)
+# Database IDs in Metabase (change if you set it up from scratch)
 DATABASES = {
     'spark': 2,
     'trino': 3,
@@ -17,14 +17,14 @@ METABASE_URL = os.getenv('METABASE_URL', 'http://localhost:53000')
 
 def exe_query(sql, engine='spark'):
     """
-    Thực thi SQL qua Metabase API.
+    Execute SQL via the Metabase API.
 
     Args:
-        sql: Câu truy vấn SQL
-        engine: 'spark' hoặc 'trino'
+        sql: SQL query
+        engine: 'spark' or 'trino'
 
     Returns:
-        dict với 'rows' và 'cols'
+        dict with 'rows' and 'cols'
     """
     database_id = DATABASES.get(engine)
     if database_id is None:
