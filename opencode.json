@@ -1,12 +1,13 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["AGENT_INSTRUCTION.md", "AGENTS.md"],
-  "subagent_depth": 2,
+  "default_agent": "team-lead",
+  "instructions": ["AGENTS.md"],
 
   "agent": {
     "build": {
-      "description": "Full development agent — mặc định khi bắt đầu session",
+      "description": "Agent build — phát triển script/query/skill/agent mới, điều chỉnh chính sách chung",
       "mode": "primary",
+      "prompt": "{file:AGENT_INSTRUCTION.md}",
       "color": "#4B4646",
       "permission": {
         "edit": "allow",
@@ -28,7 +29,7 @@
     },
 
     "team-lead": {
-      "description": "Điều phối Data Team — tạo thư mục bài toán, giao task, review kết quả",
+      "description": "Điều phối Data Team — giao task, theo dõi, tổng hợp kết quả",
       "mode": "primary",
       "prompt": "{file:.opencode/agents/team-lead.md}",
       "model": "opencode/big-pickle",
@@ -37,25 +38,27 @@
       "permission": {
         "task": { "*": "allow" },
         "edit": {
-          "*": "ask",
-          "skill/*": "allow",
-          "script/*": "allow",
-          "docs/*": "allow",
-          ".opencode/*": "allow"
+          "*": "deny",
+          "docs/**": "allow"
         },
         "bash": {
-          "*": "ask",
-          "docker exec*": "allow",
-          "python query/*": "allow",
-          "python script/*": "allow",
-          "mkdir docs/*": "allow"
+          "*": "deny",
+          "mkdir docs/*": "allow",
+          "mkdir -p docs/*": "allow",
+          "mkdir -p docs/*/*": "allow"
         },
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "skill": "allow",
-        "websearch": "allow",
-        "webfetch": "allow"
+        "read": {
+          "*": "deny",
+          "docs/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "docs/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "docs/**": "allow"
+        }
       }
     },
 
@@ -67,15 +70,33 @@
       "color": "#3498DB",
       "temperature": 0.4,
       "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": { "*": "deny", "python query/*": "allow" },
+        "read": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow"
+        },
+        "list": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow"
+        },
         "edit": {
           "*": "deny",
-          "docs/*/Data_Requirement.md": "allow"
+          "docs/**": "allow"
         },
-        "skill": "allow",
+        "bash": {
+          "*": "deny"
+        },
         "websearch": "allow",
         "webfetch": "allow"
       }
@@ -89,19 +110,39 @@
       "color": "#9B59B6",
       "temperature": 0.2,
       "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": {
+        "read": {
           "*": "deny",
-          "python query/*": "allow",
-          "python script/build_catalog.py": "allow"
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow"
+        },
+        "list": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow"
         },
         "edit": {
           "*": "deny",
           "docs/*/design/*": "allow"
         },
-        "skill": "allow"
+        "bash": {
+          "*": "deny",
+          "python script/build_catalog.py": "allow",
+          "python script/build_lineage_from_design.py": "allow"
+        }
       }
     },
 
@@ -113,11 +154,64 @@
       "color": "#2ECC71",
       "temperature": 0.2,
       "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": "allow",
-        "edit": "allow",
+        "read": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "guide_book.md": "allow",
+          "CODING_CONVENTIONS.md": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "list": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "edit": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docs/*/design/*": "allow",
+          "docs/*/development.md": "allow"
+        },
+        "bash": {
+          "*": "deny",
+          "python query/*": "allow",
+          "python script/*": "allow",
+          "* > script/*": "deny",
+          "* >> script/*": "deny",
+          "* > query/*": "deny",
+          "* >> query/*": "deny",
+          "touch script/*": "deny",
+          "touch query/*": "deny",
+          "touch .opencode/skills/*": "deny",
+          "mkdir script/*": "deny",
+          "mkdir query/*": "deny",
+          "cp * script/*": "deny",
+          "cp * query/*": "deny",
+          "mv * script/*": "deny",
+          "mv * query/*": "deny"
+        },
         "skill": "allow"
       }
     },
@@ -130,19 +224,44 @@
       "color": "#F39C12",
       "temperature": 0.1,
       "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": {
+        "read": {
           "*": "deny",
-          "python query/*": "allow",
-          "python script/*": "allow"
+          "docs/**": "allow",
+          "template/**": "allow",
+          "guide_book.md": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "list": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
         },
         "edit": {
           "*": "deny",
           "docs/*/test/*": "allow"
         },
-        "skill": "allow"
+        "bash": {
+          "*": "deny",
+          "python query/*": "allow",
+          "python script/*": "allow"
+        }
       }
     },
 
@@ -154,11 +273,75 @@
       "color": "#1ABC9C",
       "temperature": 0.2,
       "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": "allow",
-        "edit": { "*": "deny", "docs/*/UAT.md": "allow", "skill/*": "allow" },
+        "read": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docker/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "guide_book.md": "allow",
+          "CODING_CONVENTIONS.md": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docker/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docker/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "list": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docker/**": "allow",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "edit": {
+          "*": "deny",
+          "chainslake/**": "allow",
+          "docs/*/UAT.md": "allow"
+        },
+        "bash": {
+          "*": "deny",
+          "python query/*": "allow",
+          "python script/*": "allow",
+          "docker *": "allow",
+          "* > script/*": "deny",
+          "* >> script/*": "deny",
+          "* > query/*": "deny",
+          "* >> query/*": "deny",
+          "* > .opencode/skills/*": "deny",
+          "* >> .opencode/skills/*": "deny",
+          "* > opencode.json*": "deny",
+          "* >> opencode.json*": "deny",
+          "touch script/*": "deny",
+          "touch query/*": "deny",
+          "touch .opencode/skills/*": "deny",
+          "mkdir script/*": "deny",
+          "mkdir query/*": "deny",
+          "mkdir .opencode/skills/*": "deny",
+          "cp * script/*": "deny",
+          "cp * query/*": "deny",
+          "cp * .opencode/skills/*": "deny",
+          "mv * script/*": "deny",
+          "mv * query/*": "deny",
+          "mv * .opencode/skills/*": "deny"
+        },
         "skill": "allow"
       }
     },
@@ -171,16 +354,48 @@
       "color": "#E67E22",
       "temperature": 0.5,
       "permission": {
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
+        "read": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "glob": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "grep": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "list": {
+          "*": "deny",
+          "docs/**": "allow",
+          "template/**": "allow",
+          "catalog/**": "allow",
+          "script/**": "allow",
+          "query/**": "allow"
+        },
+        "edit": {
+          "*": "deny",
+          "docs/*/Data_Requirement.md": "allow"
+        },
         "bash": {
           "*": "deny",
           "python query/*": "allow",
           "python script/*": "allow",
           "mb *": "allow"
         },
-        "edit": { "*": "deny", "docs/*/Data_Requirement.md": "allow" },
         "skill": "allow"
       }
     }

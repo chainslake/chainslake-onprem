@@ -5,13 +5,13 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Ngày tạo | 2026-07-12 15:49:46 |
-| Ngày update gần nhất | 2026-07-13 00:14:59 |
-| Số bản ghi | 463035 |
-| Số file | 6 |
-| Dung lượng | 33.3 MB |
+| Ngày update gần nhất | 2026-07-26 16:47:13 |
+| Số bản ghi | 721252 |
+| Số file | 10 |
+| Dung lượng | 50.1 MB |
 | frequentType | block |
-| fromBlock | 25516917 |
-| toBlock | 25517819 |
+| fromBlock | 25516616 |
+| toBlock | 25518120 |
 | fromEpochSecond | N/A |
 | toEpochSecond | N/A |
 
@@ -25,15 +25,15 @@
 | Column | Type | Index | Partition | Example |
 |---|---|---|---|---|
 | block_date | date | 1 | x | `2026-07-12T00:00:00Z` |
-| block_number | bigint | 2 |  | `25517066` |
-| block_time | timestamp | 3 |  | `2026-07-12T14:13:59Z` |
-| updated_time | timestamp |  |  | `2026-07-13T00:14:55.864Z` |
-| contract_address | string |  |  | `0xb5ffa377ec90ba776d9aa4c63dfc983d9937eb8b` |
-| tx_hash | string |  |  | `0xdf34427b07cf46ae1b31d1d2797ea472bdaa61480fde30c7461d7053da30c1e9` |
-| evt_index | int |  |  | `2` |
-| from | string |  |  | `0xb5ffa377ec90ba776d9aa4c63dfc983d9937eb8b` |
-| to | string |  |  | `0x0e36de8d9f51cb7a18e0187e96e70bea54131527` |
-| value | string |  |  | `4200000000000000000` |
+| block_number | bigint | 2 |  | `25516767` |
+| block_time | timestamp | 3 |  | `2026-07-12T13:13:47Z` |
+| updated_time | timestamp |  |  | `2026-07-26T16:47:11.513Z` |
+| contract_address | string |  |  | `0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2` |
+| tx_hash | string |  |  | `0x92020ba2cb61bb25b0f4545a2c1c9c6850d3ff0eaf1c1a78ba56b1b63bab2584` |
+| evt_index | int |  |  | `0` |
+| from | string |  |  | `0xbdb3ba9ffe392549e1f8658dd2630c141fdf47b6` |
+| to | string |  |  | `0xf4acdac048c14c5e49bbede0c72444d806a75cde` |
+| value | string |  |  | `253584336975104662` |
 
 ## SQL Transform
 

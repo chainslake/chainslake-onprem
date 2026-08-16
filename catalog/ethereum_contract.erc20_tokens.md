@@ -4,14 +4,14 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Ngày tạo | 2026-07-12 15:49:59 |
-| Ngày update gần nhất | 2026-07-13 00:18:13 |
-| Số bản ghi | 2793 |
-| Số file | 30 |
-| Dung lượng | 227.7 KB |
+| Ngày tạo | 2026-07-26 16:54:25 |
+| Ngày update gần nhất | 2026-07-26 16:58:18 |
+| Số bản ghi | 1457 |
+| Số file | 10 |
+| Dung lượng | 106.0 KB |
 | frequentType | block |
-| fromBlock | 25516917 |
-| toBlock | 25517819 |
+| fromBlock | 25517820 |
+| toBlock | 25518120 |
 | fromEpochSecond | N/A |
 | toEpochSecond | N/A |
 
@@ -24,10 +24,10 @@
 
 | Column | Type | Index | Partition | Example |
 |---|---|---|---|---|
-| contract_address | string | 1 |  | `0xc71c923445abdfc2c9b50292d8498745330f18ab` |
-| updated_time | timestamp |  |  | `2026-07-13T00:16:28.291Z` |
-| name | string |  |  | `SY YieldFi vyUSD` |
-| symbol | string |  |  | `SY-vyUSD` |
+| contract_address | string | 1 |  | `0x8f8221afbb33998d8584a2b05749ba73c37a938a` |
+| updated_time | timestamp |  |  | `2026-07-26T16:54:25.13Z` |
+| name | string |  |  | `Request Token` |
+| symbol | string |  |  | `REQ` |
 | decimals | int |  |  | `18` |
 
 ## SQL Transform

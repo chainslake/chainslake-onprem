@@ -500,3 +500,68 @@ Viết cho tôi một guide_book.md để giúp người dùng và Agent có th�
 - Dựa vào thông tin của bảng ethereum_token.erc20_transfer có trong thư mục catalog
 - Dựa vào guide_book.md để hiểu cơ chế hoạt động của job trong hệ thống
 - hãy viết cho tôi tài liệu Test case cho bảng này vào file tempate/TestCase.md, tôi sẽ sử dụng tài liệu này làm chuẩn cho phần Test
+
+===
+
+Tôi muốn biết khối lượng giao dịch của các token trên sàn dex mỗi ngày
+
+===
+
+Tôi muốn tạo 1 skill mới để tạo job lấy thông tin từ contract. Hãy xem ví dụ từ job ethereum/contract/erc20_tokens.sh, job này sử dụng sql evm_contract/erc20_tokens.sql, nhiệm vụ của job này là tạo ra bảng ethereum_contract.erc20_tokens chứa thông tin gồm name, symbol, decimals của tất cả các contract erc20. Input của job này là bảng ethereum_decoded.erc20_evt_transfer chứa tất cả các event giao dịch erc20 transfer. Bằng cách sử dụng select dictinct và kiểm tra điều kiện ${if table_existed}, logic sẽ đảm bảo rằng contract_address trong bảng không bị lặp lại. Tại mỗi lần chạy các contract mới được thêm vào sẽ sử dụng một function call được khai báo trong biến register_evm_call, tên function chính là tên của file abi, trong file abi đã có khai báo sẵn các function mà có thể gọi được của contract erc20 như name, symbol, decimals, từ đó trong sql có thể gọi các function này cho từng contract mới để lấy thông tin
+
+=== 
+
+Từ 2 skill add-contract-decode-job, add-contract-info-job hãy giúp tôi bổ sung thêm 1 phần mới vào guide_book.md mô tả cơ chế hoạt động 2 config pre_decode_tables và register_evm_call
+
+===
+
+Vấn đề 1: register_evm_call đã hỗ trợ gọi với nhiều tham số đúng như phương án đề xuất
+Vấn đề 2: Đồng ý
+Vấn đề 3: Đồng ý
+Vấn đề 4: Loại bỏ create_block_number vì không cần thiết
+Vấn đề 5: Đồng ý
+Vấn đề 6: Đồng ý
+
+===
+
+Tôi muốn giới hạn lại quyền đọc, ghi, thực thi của các agent trong nhóm data agent team như sau:
+    - Các agent trong nhóm này chỉ được sử dụng các script, query, skill đã có sẵn, không phát triển các script, query skill mới (việc phát triển các script, query, skill mới là do Agent build thực hiện)
+    - Sử dụng các skill có sẵn, chọn đúng skill cho nhiệm vụ để tránh phải đọc code quá nhiều không cần thiết
+    - docs và template là các thưc mục chung mà nhóm data agent có thể truy cập, file guild_book.md cũng là file mà các agent có thể đọc nếu cần
+    - Ngoài các thư mục dùng chung thì các Agent chỉ được làm việc trong các thư mục giới hạn sau:
+        - BA: Làm việc với user và viêt tài liệu trong thư mục docs, không truy cập vào bất kỳ nơi nào khác
+        - data-architect: được truy cập thư mục catalog, thực thi script build_catalog
+        - developer, dataops: làm việc trong thư mục chainslake, được dùng tất cả các script, query và skill
+        - tester, data-analyst: được dùng tất cả các script, query và 
+        
+===
+
+Tôi muốn sửa lại guide_book.md mục 9. pre_decode_tables và register_evm_call cho phép có thể khai báo nhiều bảng cần decode và nhiều ABI (cách nhau bới dấu , và không có dấu cách). Khi gọi các function được đăng ký trong register_evm_call nếu function có nhiều parameter thì các parameter của nó chỉ cần nối vào sau function_name và cách nhau bới dấu cách. Hãy sửa lại guide_book cho tôi
+
+=== 
+
+Hiện tại tôi thấy rằng permission cho mỗi agent vẫn chưa thực sự tốt, các agent khi được gọi đến thường đọc rất nhiều file không liên quan trước khi thực sự bắt tay vào công việc, trong khi đó thì các skill đã được xây dựng sẵn thì mãi sau mới được gọi đến để sử dụng, tôi muốn bạn review lại tất cả permission của các agent và đề xuất cho tôi phương án cải thiện theo định hướng sau:
+- Các agent được dùng script, query, skill theo đúng nhiệm vụ mà chúng được giao, ưu tiên sử dụng skill có sẵn thay vì đọc lại code
+- Chỉ agent build có quyền phát triển các script, query, hoặc skill mới các agent khác chỉ có thể sử dụng
+- Khi 1 agent được khởi tạo nó chỉ cần biết rõ nó là ai, nhiệm vụ gì thay vì đưa tất cả context của dự án vào gây loãng
+- khi khởi động tôi muốn mặc định agent Team leader sẽ được chọn thay vì Build như hiện tại (Build chỉ được gọi khi cần phát triển skill, script, query mới, hoặc cần những điều chỉnh chính sách chung)
+
+hãy áp dụng 1, 2, 3, 5
+với số 4 không cho phép developer tester gọi trực tiếp docker, vì đã có script run_job rồi
+
+===
+
+Tôi đã thử nghiệm sử dụng nhóm Agent để làm bài toán đầu tiên, tuy nhiên tôi nhận thấy có một số vấn đề sau:
+    - Các Agent thay vì tập trung vào nhiệm vụ được giao thì chúng lại tự động đọc rất nhiều thông tin không cần thiết, điều này có thể do lượng thông tin đưa vào context chung của các Agent chưa tốt
+    - Các Agent sử dụng các công cụ, skill, query, script chưa phù hợp dẫn đến các hành vi xử lý lòng vòng, phức tạp thậm chí tự động can thiệp vào các file không liên quan đến nhiệm vụ
+
+Vì vậy tôi muốn review lại để cải thiện tốt hơn, hãy bắt đầu với AGENT.md, đây là prompt chung của tất cả các Agent, bạn có ý tưởng gì để cải thiện không?
+
+Vì đây là prompt chung cho các Agent nên tôi muốn nó phải thật ngắn gọn chỉ giữ lại những gì chung nhất, loại bỏ tất cả các mời gọi đọc file khác không cần thiết. Các thông tin cần có bao gồm:
+    - Lời giới thiệu bối cảnh ngắn gọn có thể dùng cho mọi agent. Ví dụ: Bạn là 1 Agent trong nhóm Data Agent Team của Chainslake gồm có: ...
+    - Mô tả chung về nhiệm vụ: Nhiệm vụ của bạn là thực hiện một công đoạn cụ thể trong quy trình để xử lý bài toán cho người dùng
+    - Các Agent trong team gồm có: Liệt kê danh sách Agent, mỗi Agent có 1 câu mô tả ngắn gọn (đủ để mọi Agent trong team đều ít nhất biêt Agent khác làm việc gì)
+    - Mô tả về quy trình xử lý bài toán: Chỉ cần mô tả từng bước một cách khai quát, ai làm việc gì không cần chi tiết
+    - Luật chung cho tất cả các Agent, ví dụ:
+        - Bạn sẽ được cấp phép sử dụng các skill, tool (script, query), tài liệu đi kèm và không gian làm việc với quyền hạn xác định 
+        - Bám sát nhiệm vụ được giao, sử dụng skill, hướng dẫn và tool được cấp phép để thực hiện nhiệm vụ

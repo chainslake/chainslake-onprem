@@ -69,7 +69,7 @@ with DAG(
 
     ethereum_decoded_erc20_evt_transfer = BashOperator(
         task_id="ethereum_decoded.erc20_evt_transfer",
-        bash_command=f"cd {RUN_DIR} && ./contract/decoded_log.sh erc20_evt_transfer backward "
+        bash_command=f"cd {RUN_DIR} && ./decoded/erc20_evt_transfer.sh "
     )
 
     ethereum_logs >> ethereum_decoded_erc20_evt_transfer

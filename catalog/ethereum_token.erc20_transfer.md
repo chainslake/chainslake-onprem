@@ -5,13 +5,13 @@
 | Thuộc tính | Giá trị |
 |---|---|
 | Ngày tạo | 2026-07-12 15:54:30 |
-| Ngày update gần nhất | 2026-07-13 00:18:35 |
-| Số bản ghi | 463035 |
-| Số file | 6 |
-| Dung lượng | 35.2 MB |
+| Ngày update gần nhất | 2026-07-26 16:58:38 |
+| Số bản ghi | 599356 |
+| Số file | 8 |
+| Dung lượng | 44.2 MB |
 | frequentType | block |
 | fromBlock | 25516917 |
-| toBlock | 25517819 |
+| toBlock | 25518120 |
 | fromEpochSecond | N/A |
 | toEpochSecond | N/A |
 

@@ -55,6 +55,28 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 
 ---
 
+## run_job.py
+- **Mục đích**: Chạy một job pipeline qua docker exec (thay cho việc chạy thủ công `docker exec ...`). Stream output trực tiếp ra terminal, trả về đúng exit code của job. Hỗ trợ liệt kê job có sẵn, dry-run, timeout.
+- **Input**:
+  - Positional: `job` — job reference, hỗ trợ nhiều format:
+    - `ethereum/extract/blocks.sh` hoặc `ethereum.extract.blocks` — đầy đủ chain/category/job
+    - `extract/blocks --chain ethereum` — category + job, kèm `--chain`
+    - `blocks --chain ethereum` — chỉ tên job, kèm `--chain`
+    - `ethereum/origin` — chain + category (job tự suy nếu category chỉ có 1 file)
+  - `--chain` — tên chain (cần khi job_ref thiếu chain)
+  - `--list` — liệt kê tất cả job scripts có sẵn (tùy chọn kèm `--chain`)
+  - `--dry-run` — chỉ in lệnh docker sẽ chạy, không thực thi
+  - `--timeout <giây>` — kill job nếu chạy quá lâu
+- **Output**: Output của Spark job stream theo thời gian thực, exit code trả về bằng exit code của job
+- **Ví dụ**:
+  - `python script/run_job.py ethereum/extract/blocks.sh`
+  - `python script/run_job.py ethereum.extract.blocks`
+  - `python script/run_job.py blocks --chain ethereum`
+  - `python script/run_job.py --list`
+  - `python script/run_job.py ethereum/origin/transaction_blocks.sh --timeout 600`
+
+---
+
 ## build_catalog.py
 - **Mục đích**: Thu thập metadata từ tất cả bảng trong data warehouse và tạo tài liệu catalog markdown (per-table + lineage graph)
 - **Config**: Đọc `METABASE_API_KEY` và `METABASE_URL` từ `query/.env`
@@ -67,5 +89,21 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
   - `python script/build_catalog.py`
   - `python script/build_catalog.py --skip-count`
   - `python script/build_catalog.py --output-dir /tmp/catalog`
+
+---
+
+## build_lineage_from_design.py
+- **Mục đích**: Đọc các file design của Data Architect trong thư mục `docs/<problem>/design/` và sinh `lineage.md` (Mermaid graph + bảng chi tiết) ngay trong thư mục design — ghi rõ bảng nào đã có trong warehouse, bảng nào đang có bản `_dev`, bảng nào cần làm mới
+- **Config**: Query warehouse Spark qua `query/.env` (`METABASE_API_KEY`) để xác định bảng đã tồn tại; dùng `--offline` để thay bằng thư mục catalog
+- **Input**:
+  - Positional: `problem` — tên bài toán (thư mục con của `docs/`, ví dụ `daily_dex_token_volume`)
+  - `--design-dir` — Đường dẫn trực tiếp tới thư mục design (thay thế `problem`)
+  - `--offline` — Không query warehouse, dùng thư mục catalog xác định bảng đã có
+  - `--catalog-dir` — Thư mục catalog dùng khi `--offline` (mặc định: `catalog/`)
+- **Output**: `docs/<problem>/design/lineage.md` — Mermaid graph tô màu theo trạng thái (✅ CÓ / 🔄 DEV / ❌ MỚI), bảng chi tiết kèm trạng thái, danh sách bảng đã có / cần làm mới, root/leaf tables
+- **Ví dụ**:
+  - `python script/build_lineage_from_design.py daily_dex_token_volume`
+  - `python script/build_lineage_from_design.py daily_dex_token_volume --offline`
+  - `python script/build_lineage_from_design.py --design-dir docs/foo/design`
 
 

@@ -15,6 +15,41 @@ DATABASES = {
 METABASE_URL = os.getenv('METABASE_URL', 'http://localhost:53000')
 
 
+def _extract_error(resp):
+    """Trích xuất thông báo lỗi rõ ràng từ Metabase response."""
+    try:
+        body = resp.json()
+    except Exception:
+        return resp.text
+
+    # Lỗi từ Spark/Trino qua Metabase
+    via = body.get('via', [])
+    for item in via:
+        error_msg = item.get('error', '')
+        if error_msg:
+            # Cắt bỏ Java stack trace, chỉ giữ dòng đầu chứa thông báo lỗi
+            first_line = error_msg.split('\n')[0].strip()
+            # Bỏ prefix nếu có (vd: "Error executing query: org.apache.hive...")
+            if ': ' in first_line:
+                parts = first_line.split(': ', 2)
+                if len(parts) >= 3:
+                    first_line = parts[2]
+                elif len(parts) == 2:
+                    first_line = parts[1]
+            return first_line
+
+    # Lỗi từ Metabase trực tiếp
+    errors = body.get('errors', [])
+    if errors:
+        return '; '.join(errors)
+
+    message = body.get('message', '')
+    if message:
+        return message
+
+    return resp.text
+
+
 def exe_query(sql, engine='spark'):
     """
     Thực thi SQL qua Metabase API.
@@ -45,7 +80,11 @@ def exe_query(sql, engine='spark'):
         'X-API-KEY': api_key
     }
     resp = requests.post(f"{METABASE_URL}/api/dataset", json=body, headers=header, timeout=60)
-    resp.raise_for_status()
+
+    if not resp.ok:
+        error_detail = _extract_error(resp)
+        raise RuntimeError(f"Query failed (HTTP {resp.status_code}):\n{error_detail}")
+
     data = resp.json()['data']
     return {
         'rows': data['rows'],

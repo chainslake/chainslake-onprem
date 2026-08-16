@@ -14,6 +14,7 @@ Tài liệu này mô tả cơ chế hoạt động bên trong của các job tro
 6. [Cơ chế xử lý lỗi và đảm bảo dữ liệu](#6-cơ-chế-xử-lý-lỗi-và-đảm-bảo-dữ-liệu)
 7. [Tóm tắt flow chạy của một job](#7-tóm-tắt-flow-chạy-của-một-job)
 8. [Ví dụ thực tế](#8-ví-dụ-thực-tế)
+9. [Cơ chế hoạt động của `pre_decode_tables` và `register_evm_call`](#9-cơ-chế-hoạt-động-của-pre_decode_tables-và-register_evm_call)
 
 ---
 
@@ -421,6 +422,145 @@ ethereum.daily_active_contracts (output, day-based):
 
 ---
 
+## 9. Cơ chế hoạt động của `pre_decode_tables` và `register_evm_call`
+
+Hai config `pre_decode_tables` (dùng trong job decode event) và `register_evm_call` (dùng trong job lấy metadata contract) là các cơ chế đặc biệt giúp SQL job giao tiếp trực tiếp với blockchain qua EVM engine. Cả hai đều được khai báo trong header của file `.sql` và được engine xử lý trước/bên cạnh khi chạy SQL body.
+
+### 9.1 `pre_decode_tables` — Cơ chế decode event
+
+**Vai trò**: Khai báo một hoặc nhiều tên temp table (cách nhau bởi dấu `,` và không có dấu cách) mà decode engine sẽ ghi kết quả decode event vào trước khi SQL body chạy. SQL body chỉ việc đọc từ các temp table này.
+
+**Khai báo trong template `evm_contract/decode_log.sql`**:
+
+```
+frequent_type=block
+list_input_tables=${chain_name}.logs
+logs_table_name=${chain_name}.logs
+pre_decode_tables=${table_name}
+output_table=${chain_name}_decoded.${table_name}
+re_partition_by_range=block_date,block_time
+partition_by=block_date
+write_mode=Append
+number_index_columns=3
+```
+
+Một bảng decode tương ứng một output_table. Muốn decode nhiều event khác nhau (nhiều ABI) trong cùng một job, liệt kê nhiều tên cách nhau bởi dấu `,` **không có dấu cách**:
+
+```
+pre_decode_tables=uniswap_v2_evt_swap,sushiswap_evt_swap,curve_evt_tokenexchange
+```
+
+**Cơ chế hoạt động**:
+
+```
+Job chạy
+    │
+    ▼
+1. Đọc logs thô từ list_input_tables / logs_table_name (ví dụ ethereum.logs)
+    │
+    ▼
+2. Với mỗi tên trong pre_decode_tables, decode engine tìm ABI tương ứng
+   → strip hậu tố _evt_* → tìm file ABI (ví dụ uniswap_v3_evt_swap → uniswap_v3.json)
+    │
+    ▼
+3. Engine decode các event logs theo từng ABI trong block range hiện tại
+    │
+    ▼
+4. Kết quả decode của mỗi ABI được ghi vào temp table có tên tương ứng trong pre_decode_tables
+    │
+    ▼
+5. SQL body chạy: select * from ${pre_decode_tables}
+   (hoặc custom: join/union nhiều temp table, thêm metadata rồi mới output)
+    │
+    ▼
+6. Kết quả ghi vào output_table (<chain>_decoded.<table_name>)
+```
+
+**Điểm quan trọng**:
+- Mỗi tên trong `pre_decode_tables` chính là `table_name` base của một event (ví dụ `uniswap_v3_evt_swap`), **KHÔNG** cần `_dev` suffix và không bao gồm schema — đây là tên temp table do decode engine tạo, không phải bảng production
+- Mỗi temp table tương ứng **một ABI riêng** (strip hậu tố `_evt_*`) và được decode độc lập
+- Bảng output vẫn là bảng `<chain>_decoded.<table_name>` thực tế, được engine tạo từ temp table qua SQL body
+- Column names trong output giữ nguyên theo ABI parameter names (camelCase), KHÔNG convert sang snake_case
+- SQL body có thể custom (join pool metadata, transform, ...) để enrich dữ liệu decoded trước khi ghi ra output table
+- `number_index_columns=3` tương ứng `block_date, block_number, block_time` — 3 cột index đầu tiên
+
+### 9.2 `register_evm_call` — Cơ chế gọi view function của contract
+
+**Vai trò**: Đăng ký một hoặc nhiều ABI file (cách nhau bởi dấu `,` và không có dấu cách) để SQL body có thể gọi được các **view function** của smart contract (name, symbol, decimals, ...) trực tiếp qua RPC, phục vụ cho việc lấy metadata contract mà không cần lưu trong bảng event.
+
+**Khai báo trong SQL file** (ví dụ `evm_contract/erc20_tokens.sql`):
+
+```
+frequent_type=block
+list_input_tables=${chain_name}_decoded.erc20_evt_transfer
+register_evm_call=erc20
+max_num_files=200
+output_table=${chain_name}_contract.erc20_tokens
+write_mode=Append
+number_index_columns=1
+```
+
+Muốn gọi thêm view function từ các ABI khác trong cùng một job, liệt kê nhiều tên cách nhau bởi dấu `,` **không có dấu cách**:
+
+```
+register_evm_call=erc20,dex_pool
+```
+
+**Cơ chế hoạt động**:
+
+```
+Job chạy
+    │
+    ▼
+1. Engine đọc config register_evm_call (ví dụ erc20,dex_pool)
+   → map mỗi tên sang file ABI chainslake/evm/abi/<tên>.json
+    │
+    ▼
+2. Engine đăng ký SQL function tên <abi_name> cho từng ABI
+   (ví dụ: erc20(...), dex_pool(...))
+    │
+    ▼
+3. SQL body gọi erc20(CONCAT(contract_address, ' name')) cho từng contract mới
+    │
+    ▼
+4. Engine parse argument: tách contract_address, tên function và các parameter
+   (cách nhau bởi dấu cách) → tìm function trong ABI đã đăng ký
+    │
+    ▼
+5. Engine gọi eth_call qua RPC tới contract tại address, truyền các parameter vào view function
+    │
+    ▼
+6. Kết quả trả về dạng string → cast nếu cần (ví dụ decimals → INT)
+    │
+    ▼
+7. Kết quả ghi vào output_table (<chain>_contract.<table_name>)
+```
+
+**Điểm quan trọng**:
+- Mỗi giá trị trong `register_evm_call` = tên file ABI (bỏ `.json`): `erc20` → file `erc20.json`, `dex_pool` → file `dex_pool.json`; mỗi ABI đăng ký một SQL function mang tên của nó (`erc20(...)`, `dex_pool(...)`)
+- **Cú pháp gọi**: `<abi_name>(CONCAT(contract_address, ' <function_name>'))` — có **đúng 1 space** giữa address và tên function
+- **Function có nhiều parameter**: nối các parameter ngay sau tên function, cách nhau bởi **dấu cách** (không dùng ký tự phân tách khác như `,`):
+  - Không tham số: `erc20(CONCAT(contract_address, ' name'))`
+  - 1 tham số: `dex_pool(CONCAT(pool_address, ' coins 0'))` → `coins(uint256 index)`
+  - Nhiều tham số: `<abi_name>(CONCAT(address, ' function_name param1 param2 ...'))`
+- Tên function phải khớp chính xác với `"name"` trong ABI
+- Function trả về dạng string; nếu cần kiểu khác phải `cast` (ví dụ `decimals` là `uint256` nhưng trả về string → `cast(... as INT)`)
+- Job cần cấu hình `rpc_list` (biến env `$<CHAIN>_RPCS`) để engine gọi được RPC — `.sh` phải `export $(cat $CHAINSLAKE_RUN_DIR/.env)`
+- `number_index_columns=1`: `contract_address` là index column, kết hợp logic `${if table_existed}` trong SQL để **chống lặp** — chỉ gọi function cho các contract mới chưa có trong output table
+
+### 9.3 Tóm tắt so sánh
+
+| Đặc điểm | `pre_decode_tables` | `register_evm_call` |
+|---|---|---|
+| Mục đích | Decode event từ logs có sẵn | Gọi view function lấy metadata contract |
+| Input | Bảng logs thô (`<chain>.logs`) | Bảng event đã decode (chứa `contract_address`) |
+| Output | `<chain>_decoded.<table_name>` | `<chain>_contract.<table_name>` |
+| Cần RPC | Không (chỉ decode từ dữ liệu logs đã có) | Có (`rpc_list`) |
+| Engine thao tác | Decode engine ghi temp table trước SQL | EVM call engine đăng ký function cho SQL |
+| Kết hợp chống lặp | Không cần (dữ liệu logs là duy nhất) | Có (`${if table_existed}` + index column) |
+
+---
+
 ## Tham chiếu nhanh
 
 | Thành phần | Vai trò |
@@ -430,6 +570,8 @@ ethereum.daily_active_contracts (output, day-based):
 | File `.sql` header (`frequent_type`) | Xác định loại bảng: block hoặc time-based |
 | File `.sql` header (`output_table`) | Bảng output duy nhất của job |
 | File `.sql` body (`${from}`, `${to}`) | Biến động do hệ thống tính toán, không cần set thủ công |
+| File `.sql` header (`pre_decode_tables`) | Danh sách tên temp table (cách nhau bởi `,` không dấu cách) do decode engine ghi kết quả decode event trước khi SQL body chạy (xem [Phần 9.1](#91-pre_decode_tables--cơ-chế-decode-event)) |
+| File `.sql` header (`register_evm_call`) | Đăng ký một hoặc nhiều ABI file (cách nhau bởi `,` không dấu cách) để SQL gọi được view function của contract qua RPC (xem [Phần 9.2](#92-register_evm_call--cơ-chế-gọi-view-function-của-contract)) |
 | Properties `fromBlock/toBlock` | Theo dõi khoảng block (block-based) |
 | Properties `fromEpochSecond/toEpochSecond` | Theo dõi khoảng thời gian (time-based) |
 | `origin_table` trong application.properties | Bảng reference để map block → time (cho time-based job) |

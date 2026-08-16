@@ -178,6 +178,64 @@ Nhập tên bảng để xác nhận: ethereum.blocks
 ✅ Đã mở khóa bảng 'ethereum.blocks' thành công.
 ```
 
+### `insert_dev_data.py` — Insert data vào bảng `_dev`
+
+Insert dữ liệu vào bảng có hậu tố `_dev` để phục vụ testing (thêm dữ liệu edge case, chuẩn bị dữ liệu test...). Script **CHỈ cho phép** insert vào bảng `_dev` — bảng production sẽ bị chặn. Nếu câu INSERT dạng `SELECT` thì **bắt buộc phải có `LIMIT`**.
+
+**Cú pháp:**
+```bash
+python insert_dev_data.py "<câu_INSERT_SQL>"
+python insert_dev_data.py -f insert.sql
+```
+
+**Ví dụ:**
+```bash
+# Insert theo VALUES
+python insert_dev_data.py "INSERT INTO ethereum.transactions_dev (hash, block_number) VALUES ('0xabc', 123)"
+
+# Insert từ SELECT (bắt buộc có LIMIT)
+python insert_dev_data.py "INSERT INTO ethereum.transactions_dev SELECT * FROM ethereum.transactions_dev LIMIT 10"
+
+# Insert Overwrite (bắt buộc có LIMIT nếu dùng SELECT)
+python insert_dev_data.py "INSERT OVERWRITE ethereum.transactions_dev SELECT * FROM ethereum.transactions_dev LIMIT 10"
+```
+
+**Lỗi khi insert vào bảng production (không có `_dev`):**
+```
+Lỗi: Bảng đích 'ethereum.transactions' không có hậu tố _dev. CHỈ cho phép insert vào bảng _dev để bảo vệ production.
+```
+
+**Lỗi khi INSERT dạng SELECT thiếu LIMIT:**
+```
+Lỗi: Câu INSERT dạng SELECT phải có mệnh đề LIMIT để giới hạn số bản ghi.
+```
+
+---
+
+### `set_table_property.py` — Set properties của bảng `_dev`
+
+Set TBLPROPERTIES cho bảng có hậu tố `_dev` để phục vụ testing (điều chỉnh `fromBlock`, `toBlock`, `isLock`, `frequenceType`...). Script **CHỈ cho phép** set trên bảng `_dev` — bảng production sẽ bị chặn.
+
+**Cú pháp:**
+```bash
+python set_table_property.py "<câu_ALTER_SQL>"
+python set_table_property.py -f set_props.sql
+```
+
+**Ví dụ:**
+```bash
+# Set fromBlock
+python set_table_property.py "ALTER TABLE ethereum.transactions_dev SET TBLPROPERTIES (fromBlock=1000)"
+
+# Set nhiều properties
+python set_table_property.py "ALTER TABLE ethereum.transactions_dev SET TBLPROPERTIES (fromBlock=1000, toBlock=2000)"
+```
+
+**Lỗi khi set trên bảng production (không có `_dev`):**
+```
+Lỗi: Bảng đích 'ethereum.transactions' không có hậu tố _dev. CHỈ cho phép set properties trên bảng _dev để bảo vệ production.
+```
+
 ---
 
 ## Cấu trúc project
@@ -191,5 +249,7 @@ query/
 ├── query_table.py            # Thực thi câu truy vấn SQL (read-only)
 ├── drop_table.py             # Xóa bảng (có xác nhận)
 ├── check_table_properties.py # Kiểm tra tblproperties của bảng
-└── unlock_table.py           # Mở khóa bảng (set isLock=0)
+├── unlock_table.py           # Mở khóa bảng (set isLock=0)
+├── insert_dev_data.py        # Insert data vào bảng _dev (chỉ _dev)
+└── set_table_property.py     # Set TBLPROPERTIES bảng _dev (chỉ _dev)
 ```
