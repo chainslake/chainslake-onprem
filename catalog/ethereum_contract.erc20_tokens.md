@@ -1,14 +1,14 @@
 # ethereum_contract.erc20_tokens
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-26 16:54:25 |
-| Ngày update gần nhất | 2026-07-26 16:58:18 |
-| Số bản ghi | 1457 |
-| Số file | 10 |
-| Dung lượng | 106.0 KB |
+| Created date | 2026-07-26 16:54:25 |
+| Last updated | 2026-07-26 16:58:18 |
+| Row count | 1457 |
+| File count | 10 |
+| Size | 106.0 KB |
 | frequentType | block |
 | fromBlock | 25517820 |
 | toBlock | 25518120 |
@@ -188,4 +188,3 @@ from new_contract_address_repartition
   "type": "function"
 }
 ```
-

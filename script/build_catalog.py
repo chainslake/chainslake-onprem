@@ -1,13 +1,13 @@
 """
-Xây dựng tài liệu catalog cho tất cả bảng trong Data Warehouse.
+Build documentation catalog for all tables in the Data Warehouse.
 
-Thu thập metadata từ warehouse (tblproperties, describe detail, count, schema)
-và sinh ra file markdown per-table cùng lineage.md.
+Collects metadata from warehouse (tblproperties, describe detail, count, schema)
+and generates per-table markdown files along with lineage.md.
 
 Usage:
     python script/build_catalog.py
     python script/build_catalog.py --output-dir /path/to/catalog
-    python script/build_catalog.py --skip-count   # Bỏ qua đếm rows (nhanh hơn)
+    python script/build_catalog.py --skip-count   # Skip row count (faster)
 """
 import argparse
 import os
@@ -132,7 +132,7 @@ def format_datetime(dt_str):
 
 def build_schema_example_table(columns, example_data, num_indexed_cols=None, partition_columns=None):
     if not columns:
-        return '_Không có thông tin schema_'
+        return '_No schema information available_'
 
     example_values = {}
     if example_data and example_data.get('rows'):
@@ -212,15 +212,15 @@ def build_table_markdown(table_info, downstream_map=None):
     parts = []
     parts.append(f"# {full_name}\n")
 
-    # Trang thai
-    parts.append("## Trạng thái\n")
-    parts.append("| Thuộc tính | Giá trị |")
+    # Status
+    parts.append("## Status\n")
+    parts.append("| Property | Value |")
     parts.append("|---|---|")
-    parts.append(f"| Ngày tạo | {created_at} |")
-    parts.append(f"| Ngày update gần nhất | {updated_at} |")
-    parts.append(f"| Số bản ghi | {row_count if row_count is not None else 'N/A'} |")
-    parts.append(f"| Số file | {num_files if num_files is not None else 'N/A'} |")
-    parts.append(f"| Dung lượng | {format_size(size_bytes)} |")
+    parts.append(f"| Created at | {created_at} |")
+    parts.append(f"| Last updated | {updated_at} |")
+    parts.append(f"| Row count | {row_count if row_count is not None else 'N/A'} |")
+    parts.append(f"| File count | {num_files if num_files is not None else 'N/A'} |")
+    parts.append(f"| Size | {format_size(size_bytes)} |")
     parts.append(f"| frequentType | {frequent_type} |")
     parts.append(f"| fromBlock | {from_block} |")
     parts.append(f"| toBlock | {to_block} |")
@@ -361,8 +361,8 @@ def build_lineage_md(all_tables):
     )
 
     lines = ["# Data Warehouse Lineage\n"]
-    lines.append("Biểu đồ thể hiện sự phụ thuộc (lineage) giữa các bảng trong warehouse.")
-    lines.append("Mũi tên `-->` nghĩa là \"được sử dụng để tạo ra\".\n")
+    lines.append("Dependency diagram (lineage) between tables in the warehouse.")
+    lines.append("Arrow `-->` means \"is used to create\".\n")
 
     lines.append("## Mermaid Graph\n")
     lines.append("```mermaid")
@@ -389,8 +389,8 @@ def build_lineage_md(all_tables):
 
     lines.append("```\n")
 
-    lines.append("## Bảng chi tiết\n")
-    lines.append("| Bảng | Upstream | Downstream |")
+    lines.append("## Detail Table\n")
+    lines.append("| Table | Upstream | Downstream |")
     lines.append("|---|---|---|")
     for name in all_names:
         ups = upstream_map[name]
@@ -405,13 +405,13 @@ def build_lineage_md(all_tables):
     leaf_tables = [n for n in all_names if not downstream_map[n]]
 
     if root_tables:
-        lines.append("## Root tables (không có upstream)\n")
+        lines.append("## Root tables (no upstream)\n")
         for t in root_tables:
             lines.append(f"- `{t}`")
         lines.append("")
 
     if leaf_tables:
-        lines.append("## Leaf tables (không có downstream)\n")
+        lines.append("## Leaf tables (no downstream)\n")
         for t in leaf_tables:
             lines.append(f"- `{t}`")
         lines.append("")
@@ -420,10 +420,10 @@ def build_lineage_md(all_tables):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Xây dựng catalog data warehouse")
-    parser.add_argument("--output-dir", default="catalog", help="Thư mục output (default: catalog)")
-    parser.add_argument("--skip-count", action="store_true", help="Bỏ qua đếm số rows")
-    parser.add_argument("--skip-example", action="store_true", help="Bỏ qua lấy ví dụ dữ liệu")
+    parser = argparse.ArgumentParser(description="Build data warehouse catalog")
+    parser.add_argument("--output-dir", default="catalog", help="Output directory (default: catalog)")
+    parser.add_argument("--skip-count", action="store_true", help="Skip row counting")
+    parser.add_argument("--skip-example", action="store_true", help="Skip fetching example data")
     args = parser.parse_args()
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -433,23 +433,23 @@ def main():
     print(f"Output: {output_dir}\n")
 
     # Step 1: Get all schemas
-    print("=== Đang lấy danh sách schemas ===")
+    print("=== Fetching schema list ===")
     schemas = show_schemas()
-    print(f"Tìm thấy {len(schemas)} schemas: {', '.join(schemas)}\n")
+    print(f"Found {len(schemas)} schemas: {', '.join(schemas)}\n")
 
     # Step 2: Get all tables
     all_tables = []
     for schema in schemas:
         print(f"--- Schema: {schema} ---")
         tables = show_tables(schema)
-        print(f"  Tìm thấy {len(tables)} bảng")
+        print(f"  Found {len(tables)} tables")
         all_tables.extend(tables)
         print()
 
-    print(f"Tổng cộng: {len(all_tables)} bảng\n")
+    print(f"Total: {len(all_tables)} tables\n")
 
     # Step 3: Gather metadata for each table
-    print("=== Đang thu thập metadata ===\n")
+    print("=== Collecting metadata ===\n")
     for i, table in enumerate(all_tables):
         full_name = table['full_name']
         print(f"[{i + 1}/{len(all_tables)}] {full_name}")
@@ -491,26 +491,26 @@ def main():
                 downstream_map[up].append(t['full_name'])
 
     # Step 5: Generate per-table markdown
-    print("=== Đang tạo file markdown ===\n")
+    print("=== Generating markdown files ===\n")
     for table in all_tables:
         md_content = build_table_markdown(table, downstream_map)
         filename = f"{table['full_name']}.md"
         filepath = os.path.join(output_dir, filename)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(md_content)
-        print(f"  Da tao: {filename}")
+        print(f"  Created: {filename}")
 
     # Step 6: Generate lineage.md
-    print(f"\n=== Dong lineage.md ===")
+    print(f"\n=== Generating lineage.md ===")
     lineage_content = build_lineage_md(all_tables)
     lineage_path = os.path.join(output_dir, "lineage.md")
     with open(lineage_path, 'w', encoding='utf-8') as f:
         f.write(lineage_content)
-    print(f"  Da tao: lineage.md")
+    print(f"  Created: lineage.md")
 
-    print(f"\n=== Hoan tat! ===")
-    print(f"Tong so file: {len(all_tables) + 1}")
-    print(f"Thu muc output: {output_dir}")
+    print(f"\n=== Complete! ===")
+    print(f"Total files: {len(all_tables) + 1}")
+    print(f"Output directory: {output_dir}")
 
 
 if __name__ == "__main__":

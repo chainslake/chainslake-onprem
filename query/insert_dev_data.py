@@ -1,20 +1,20 @@
 """
-Insert data vào bảng _dev để phục vụ testing.
+Insert data into _dev tables for testing.
 
-CHỈ cho phép insert vào bảng có hậu tố `_dev` — bảo vệ production tables.
-Nếu INSERT dạng SELECT thì bắt buộc có mệnh đề LIMIT.
+ONLY allows insert into tables with `_dev` suffix — protects production tables.
+INSERT with SELECT requires a LIMIT clause.
 
 Usage:
-    # Insert theo VALUES
+    # Insert via VALUES
     python query/insert_dev_data.py "INSERT INTO ethereum.transactions_dev (hash, block_number) VALUES ('0xabc', 123)"
 
-    # Insert từ câu SELECT (bắt buộc có LIMIT)
+    # Insert from SELECT (LIMIT required)
     python query/insert_dev_data.py "INSERT INTO ethereum.transactions_dev SELECT * FROM ethereum.transactions_dev LIMIT 10"
 
-    # Insert Overwrite (bắt buộc có LIMIT nếu dùng SELECT)
+    # Insert Overwrite (LIMIT required if using SELECT)
     python query/insert_dev_data.py "INSERT OVERWRITE ethereum.transactions_dev SELECT * FROM ethereum.transactions_dev LIMIT 10"
 
-    # Đọc SQL từ file
+    # Read SQL from file
     python query/insert_dev_data.py -f insert.sql
 """
 import argparse
@@ -27,10 +27,10 @@ from metabase_query import exe_query
 
 
 def extract_target_table(sql):
-    """Trích xuất tên bảng đích từ câu INSERT.
+    """Extract target table name from INSERT statement.
 
-    Hỗ trợ: INSERT INTO <table> ... / INSERT OVERWRITE <table> ...
-    Trả về (table_name, keyword) hoặc (None, None) nếu không phải INSERT.
+    Supports: INSERT INTO <table> ... / INSERT OVERWRITE <table> ...
+    Returns (table_name, keyword) or (None, None) if not INSERT.
     """
     m = re.match(
         r"^\s*INSERT\s+(?:OVERWRITE\s+)?INTO\s+([`\"\w.]+\.[`\"\w]+|[`\"\w]+)",
@@ -38,7 +38,7 @@ def extract_target_table(sql):
         re.IGNORECASE,
     )
     if not m:
-        # Cũng hỗ trợ INSERT OVERWRITE <table> ... (không có INTO)
+        # Also support INSERT OVERWRITE <table> ... (without INTO)
         m = re.match(
             r"^\s*INSERT\s+OVERWRITE\s+([`\"\w.]+\.[`\"\w]+|[`\"\w]+)",
             sql,
@@ -54,35 +54,35 @@ def extract_target_table(sql):
 
 
 def check_target_is_dev(sql):
-    """Kiểm tra bảng đích trong câu INSERT có hậu tố _dev hay không.
+    """Check if the target table in INSERT statement has _dev suffix.
 
-    Trả về (ok, message).
+    Returns (ok, message).
     """
     table, _ = extract_target_table(sql)
     if table is None:
-        return False, "Câu lệnh không phải INSERT INTO/INSERT OVERWRITE."
+        return False, "Statement is not INSERT INTO/INSERT OVERWRITE."
 
-    # Lấy phần tên bảng cuối cùng (sau dấu .)
+    # Get the last part of table name (after dot)
     table_short = table.rsplit('.', 1)[-1]
     if not table_short.endswith('_dev'):
         return False, (
-            f"Bảng đích '{table}' không có hậu tố _dev. "
-            "CHỈ cho phép insert vào bảng _dev để bảo vệ production."
+            f"Target table '{table}' does not have _dev suffix. "
+            "Only inserts into _dev tables are allowed to protect production."
         )
     return True, table
 
 
 def check_requires_limit(sql):
-    """Kiểm tra câu INSERT dạng SELECT bắt buộc có LIMIT.
+    """Check if INSERT with SELECT requires LIMIT.
 
-    - INSERT ... SELECT ... → bắt buộc có LIMIT (chống insert số lượng lớn).
-    - INSERT ... VALUES ... → không cần (VALUES không hợp lệ với LIMIT).
+    - INSERT ... SELECT ... → LIMIT required (prevents large inserts).
+    - INSERT ... VALUES ... → no LIMIT needed (VALUES cannot use LIMIT).
 
-    Trả về (ok, message).
+    Returns (ok, message).
     """
     sql_upper = sql.upper()
 
-    # Tách phần sau INSERT INTO <table> — nơi chứa SELECT/VALUES
+    # Extract part after INSERT INTO <table> — contains SELECT/VALUES
     rest = re.sub(
         r"^\s*INSERT\s+(?:OVERWRITE\s+)?(?:INTO\s+)?[`\"\w.]+\s*",
         "",
@@ -93,19 +93,19 @@ def check_requires_limit(sql):
 
     has_select = re.search(r"\bSELECT\b", rest, re.IGNORECASE)
     if not has_select:
-        return True, None  # VALUES — không yêu cầu LIMIT
+        return True, None  # VALUES — no LIMIT required
 
     if not re.search(r"\bLIMIT\s+\d+", sql_upper):
-        return False, "Câu INSERT dạng SELECT phải có mệnh đề LIMIT để giới hạn số bản ghi."
+        return False, "INSERT with SELECT must have a LIMIT clause to limit the number of records."
     return True, None
 
 
 def block_other_destructive(sql):
-    """Chặn các lệnh destructive khác trong câu SQL (UPDATE/DELETE/DROP/TRUNCATE/ALTER/CREATE).
+    """Block other destructive statements in SQL (UPDATE/DELETE/DROP/TRUNCATE/ALTER/CREATE).
 
-    Lưu ý: INSERT là mục đích của tool nên không bị chặn.
+    Note: INSERT is the purpose of this tool so it is not blocked.
     """
-    # Bỏ phần INSERT đầu câu để không vô tình khớp với chính INSERT
+    # Remove the leading INSERT to avoid accidentally matching itself
     rest = re.sub(r"^\s*INSERT\s+(?:OVERWRITE\s+)?(?:INTO\s+)?[`\"\w.]+\s*", "", sql, count=1, flags=re.IGNORECASE)
     for kw in (r'\bUPDATE\b', r'\bDELETE\b', r'\bDROP\b', r'\bTRUNCATE\b',
                r'\bALTER\b', r'\bCREATE\b', r'\bREPLACE\b', r'\bMERGE\b'):
@@ -115,50 +115,50 @@ def block_other_destructive(sql):
 
 
 def insert_dev_data(sql, engine='spark'):
-    """Thực thi câu INSERT và in kết quả."""
+    """Execute INSERT statement and print result."""
     sql = sql.strip()
     if not sql:
-        print("Lỗi: SQL rỗng")
+        print("Error: Empty SQL")
         sys.exit(1)
 
-    # Kiểm tra bảng đích phải có _dev
+    # Check target table has _dev suffix
     ok, info = check_target_is_dev(sql)
     if not ok:
-        print(f"Lỗi: {info}")
+        print(f"Error: {info}")
         sys.exit(1)
     target_table = info
 
-    # Kiểm tra INSERT dạng SELECT bắt buộc có LIMIT
+    # Check INSERT with SELECT requires LIMIT
     ok, limit_msg = check_requires_limit(sql)
     if not ok:
-        print(f"Lỗi: {limit_msg}")
+        print(f"Error: {limit_msg}")
         sys.exit(1)
 
-    # Chặn lệnh destructive khác trong SQL
+    # Block other destructive statements in SQL
     is_destructive, keyword = block_other_destructive(sql)
     if is_destructive:
-        print(f"Lỗi: Câu lệnh chứa lệnh '{keyword}' có thể thay đổi dữ liệu và bị chặn.")
-        print("Chỉ cho phép INSERT vào bảng _dev.")
+        print(f"Error: Statement contains '{keyword}' which can modify data and is blocked.")
+        print("Only INSERT into _dev tables is allowed.")
         sys.exit(1)
 
     print(f"SQL:\n{sql}\n")
     try:
         result = exe_query(sql, engine=engine)
-        print(f"Thành công! Đã insert vào bảng _dev '{target_table}'.")
+        print(f"Success! Inserted into _dev table '{target_table}'.")
         if result and result.get('rows'):
             for row in result['rows']:
                 print(row)
     except Exception as e:
-        print(f"Lỗi: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Insert data vào bảng _dev (CHỈ chấp nhận bảng có hậu tố _dev)"
+        description="Insert data into _dev tables (ONLY accepts tables with _dev suffix)"
     )
-    parser.add_argument("sql", nargs='?', help="Câu INSERT SQL (hoặc '-' để đọc từ stdin)")
-    parser.add_argument("-f", "--file", help="Đọc SQL từ file")
+    parser.add_argument("sql", nargs='?', help="INSERT SQL statement (or '-' to read from stdin)")
+    parser.add_argument("-f", "--file", help="Read SQL from file")
     parser.add_argument("--engine", choices=["spark", "trino"], default="spark")
     args = parser.parse_args()
 

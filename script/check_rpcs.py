@@ -1,30 +1,30 @@
 """
-Script kiểm tra danh sách RPC cho bất kỳ EVM chain nào.
+Script to check RPC endpoints for any EVM chain.
 
-Mục đích:
-  - Tự động lấy danh sách RPC từ chainlist.org theo chain_id hoặc tên chain
-  - Kiểm tra từng RPC có đáp ứng 3 yêu cầu sau không:
-      1. eth_blockNumber — trả về latest block number
-      2. eth_getBlockByNumber — trả về block data đầy đủ (có transactions)
-      3. eth_getBlockReceipts — trả về receipts của block (bao gồm logs)
-  - In ra danh sách PASS/FAIL và chuỗi <ENV_VAR>=<rpc1,rpc2,...> để dán vào .env
+Purpose:
+  - Automatically fetch RPC list from chainlist.org by chain_id or chain name
+  - Check each RPC against 3 requirements:
+      1. eth_blockNumber — return latest block number
+      2. eth_getBlockByNumber — return full block data (with transactions)
+      3. eth_getBlockReceipts — return block receipts (including logs)
+  - Print PASS/FAIL list and <ENV_VAR>=<rpc1,rpc2,...> string to paste into .env
 
-Input (argument dòng lệnh):
-  - chain_id (int): chain ID theo EIP-155, ví dụ 56 (BNB), 1 (Ethereum), 137 (Polygon)
-  - Hoặc tên chain (str): substring khớp với tên chain trong chainlist.org, ví dụ "BNB Smart Chain"
+Input (CLI argument):
+  - chain_id (int): chain ID per EIP-155, e.g. 56 (BNB), 1 (Ethereum), 137 (Polygon)
+  - Or chain name (str): substring matching chain name on chainlist.org, e.g. "BNB Smart Chain"
 
 Options:
-  --timeout   Timeout mỗi request (giây), mặc định 10
-  --workers   Số luồng song song, mặc định 10
-  --env-var   Tên biến môi trường để in ra, mặc định tự suy ra từ tên chain
-              Ví dụ: --env-var BNB_RPCS
+  --timeout   Timeout per request (seconds), default 10
+  --workers   Number of parallel threads, default 10
+  --env-var   Environment variable name to print, default auto-inferred from chain name
+              e.g.: --env-var BNB_RPCS
 
 Output:
-  - PASS/FAIL cho từng RPC
-  - Tổng kết số lượng
-  - Dòng <ENV_VAR>=... để copy vào .env
+  - PASS/FAIL per RPC
+  - Summary counts
+  - <ENV_VAR>=... line to copy into .env
 
-Ví dụ:
+Examples:
   python script/check_rpcs.py 56
   python script/check_rpcs.py 1 --env-var ETHEREUM_RPCS
   python script/check_rpcs.py 137 --timeout 15 --workers 20
@@ -45,7 +45,7 @@ CHAINLIST_URL = "https://chainlist.org/rpcs.json"
 # ─── RPC validation ───────────────────────────────────────────────────────────
 
 def rpc_call(url: str, method: str, params: list, timeout: int) -> dict:
-    """Gọi JSON-RPC endpoint và trả về response dict."""
+    """Call JSON-RPC endpoint and return response dict."""
     payload = json.dumps({
         "jsonrpc": "2.0",
         "method": method,
@@ -64,8 +64,8 @@ def rpc_call(url: str, method: str, params: list, timeout: int) -> dict:
 
 def has_fields(obj, fields: list) -> tuple:
     """
-    Kiểm tra object có đủ các field yêu cầu không.
-    Trả về (ok: bool, missing: list)
+    Check if object has all required fields.
+    Returns (ok: bool, missing: list)
     """
     if not isinstance(obj, dict):
         return False, fields
@@ -75,17 +75,17 @@ def has_fields(obj, fields: list) -> tuple:
 
 def check_rpc(url: str, timeout: int) -> tuple:
     """
-    Kiểm tra một RPC URL theo 3 bước.
-    Trả về (url, passed: bool, reason: str)
+    Check an RPC URL in 3 steps.
+    Returns (url, passed: bool, reason: str)
     """
     try:
-        # Bước 1: eth_blockNumber
+        # Step 1: eth_blockNumber
         resp = rpc_call(url, "eth_blockNumber", [], timeout)
         block_hex = resp.get("result")
         if not block_hex or not isinstance(block_hex, str):
-            return url, False, "eth_blockNumber: kết quả không hợp lệ"
+            return url, False, "eth_blockNumber: invalid result"
 
-        # Bước 2: eth_getBlockByNumber
+        # Step 2: eth_getBlockByNumber
         resp2 = rpc_call(url, "eth_getBlockByNumber", [block_hex, True], timeout)
         block = resp2.get("result")
         required_block_fields = [
@@ -94,9 +94,9 @@ def check_rpc(url: str, timeout: int) -> tuple:
         ]
         ok, missing = has_fields(block, required_block_fields)
         if not ok:
-            return url, False, f"eth_getBlockByNumber: thiếu fields {missing}"
+            return url, False, f"eth_getBlockByNumber: missing fields {missing}"
 
-        # Kiểm tra transactions array (nếu block có tx thì check field của tx)
+        # Check transactions array (if block has txs, check tx fields)
         txs = block.get("transactions", [])
         if isinstance(txs, list) and len(txs) > 0:
             required_tx_fields = [
@@ -105,17 +105,17 @@ def check_rpc(url: str, timeout: int) -> tuple:
             ]
             ok, missing = has_fields(txs[0], required_tx_fields)
             if not ok:
-                return url, False, f"transaction object thiếu fields {missing}"
+                return url, False, f"transaction object missing fields {missing}"
 
-        # Bước 3: eth_getBlockReceipts
+        # Step 3: eth_getBlockReceipts
         resp3 = rpc_call(url, "eth_getBlockReceipts", [block_hex], timeout)
         receipts = resp3.get("result")
         if receipts is None:
-            return url, False, "eth_getBlockReceipts: result=null (không hỗ trợ)"
+            return url, False, "eth_getBlockReceipts: result=null (not supported)"
         if not isinstance(receipts, list):
-            return url, False, f"eth_getBlockReceipts: result không phải array, got {type(receipts).__name__}"
+            return url, False, f"eth_getBlockReceipts: result is not an array, got {type(receipts).__name__}"
 
-        # Kiểm tra fields của receipt (nếu block có receipt)
+        # Check receipt fields (if block has receipts)
         if len(receipts) > 0:
             required_receipt_fields = [
                 "blockHash",
@@ -124,7 +124,7 @@ def check_rpc(url: str, timeout: int) -> tuple:
             ]
             ok, missing = has_fields(receipts[0], required_receipt_fields)
             if not ok:
-                return url, False, f"receipt object thiếu fields {missing}"
+                return url, False, f"receipt object missing fields {missing}"
 
         return url, True, f"OK (latest block={block_hex})"
 
@@ -142,56 +142,56 @@ def check_rpc(url: str, timeout: int) -> tuple:
 
 def fetch_chainlist() -> list:
     """
-    Tải danh sách chains từ chainlist.org/rpcs.json.
-    Dùng curl thay urllib vì chainlist.org block user-agent mặc định của Python.
+    Fetch chain list from chainlist.org/rpcs.json.
+    Uses curl instead of urllib because chainlist.org blocks Python's default user-agent.
     """
-    print("📡 Đang tải danh sách chain từ chainlist.org...")
+    print("Fetching chain list from chainlist.org...")
     result = subprocess.run(
         ["curl", "-s", "--max-time", "30", CHAINLIST_URL],
         capture_output=True, text=True
     )
     if result.returncode != 0:
-        raise RuntimeError(f"curl thất bại (exit {result.returncode}): {result.stderr.strip()}")
+        raise RuntimeError(f"curl failed (exit {result.returncode}): {result.stderr.strip()}")
     return json.loads(result.stdout)
 
 
 def find_chain(chains: list, identifier: str) -> dict:
     """
-    Tìm chain theo chain_id (số) hoặc tên (chuỗi substring, case-insensitive).
-    Ném ValueError nếu không tìm thấy hoặc tìm thấy nhiều hơn 1 kết quả.
+    Find chain by chain_id (number) or name (substring, case-insensitive).
+    Raises ValueError if not found or more than 1 match.
     """
-    # Thử parse thành số nguyên (chain ID)
+    # Try parsing as integer (chain ID)
     try:
         chain_id = int(identifier)
         matches = [c for c in chains if c.get("chainId") == chain_id]
         if not matches:
-            raise ValueError(f"Không tìm thấy chain với chainId={chain_id}")
+            raise ValueError(f"No chain found with chainId={chain_id}")
         return matches[0]
     except ValueError as e:
-        # Nếu lỗi từ chính ta raise thì re-raise
-        if "Không tìm thấy" in str(e):
+        # If error was raised by us, re-raise
+        if "No chain found" in str(e):
             raise
 
-    # Tìm theo tên (substring, case-insensitive)
+    # Search by name (substring, case-insensitive)
     name_lower = identifier.lower()
     matches = [c for c in chains if name_lower in c.get("name", "").lower()]
     if not matches:
-        raise ValueError(f"Không tìm thấy chain với tên chứa '{identifier}'")
+        raise ValueError(f"No chain found with name containing '{identifier}'")
     if len(matches) > 1:
         names = [f"  chainId={c['chainId']}: {c['name']}" for c in matches]
         raise ValueError(
-            f"Tìm thấy {len(matches)} chain khớp với '{identifier}'. Hãy dùng chainId:\n"
+            f"Found {len(matches)} chains matching '{identifier}'. Please use chainId:\n"
             + "\n".join(names)
         )
     return matches[0]
 
 
 def extract_free_rpcs(chain: dict) -> list:
-    """Lấy danh sách RPC HTTPS free (không cần API key) từ chain object."""
+    """Get list of free HTTPS RPCs (no API key required) from chain object."""
     rpcs = []
     for rpc in chain.get("rpc", []):
         url = rpc.get("url", "") if isinstance(rpc, dict) else rpc
-        # Chỉ lấy HTTPS, bỏ qua các URL có placeholder key dạng ${...}
+        # Only take HTTPS, skip URLs with placeholder keys like ${...}
         if url.startswith("https://") and "${" not in url:
             rpcs.append(url)
     return rpcs
@@ -199,13 +199,13 @@ def extract_free_rpcs(chain: dict) -> list:
 
 def infer_env_var(chain_name: str) -> str:
     """
-    Tự suy ra tên biến môi trường từ tên chain.
-    Ví dụ: "BNB Smart Chain Mainnet" → "BNB_RPCS"
+    Auto-infer environment variable name from chain name.
+    e.g.: "BNB Smart Chain Mainnet" → "BNB_RPCS"
            "Ethereum Mainnet"        → "ETHEREUM_RPCS"
            "Polygon Mainnet"         → "POLYGON_RPCS"
     """
     first_word = chain_name.strip().split()[0].upper()
-    # Loại bỏ ký tự đặc biệt
+    # Remove special characters
     first_word = "".join(c for c in first_word if c.isalnum())
     return f"{first_word}_RPCS"
 
@@ -214,32 +214,32 @@ def infer_env_var(chain_name: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Kiểm tra RPC endpoints của một EVM chain từ chainlist.org"
+        description="Check RPC endpoints of an EVM chain from chainlist.org"
     )
     parser.add_argument(
         "chain",
-        help="Chain ID (số) hoặc tên chain (substring). Ví dụ: 56, 1, 137, 'BNB Smart Chain'"
+        help="Chain ID (number) or chain name (substring). e.g.: 56, 1, 137, 'BNB Smart Chain'"
     )
     parser.add_argument(
         "--timeout", type=int, default=10,
-        help="Timeout mỗi request tính bằng giây (mặc định: 10)"
+        help="Timeout per request in seconds (default: 10)"
     )
     parser.add_argument(
         "--workers", type=int, default=10,
-        help="Số luồng kiểm tra song song (mặc định: 10)"
+        help="Number of parallel check threads (default: 10)"
     )
     parser.add_argument(
         "--env-var", dest="env_var", default=None,
-        help="Tên biến môi trường để in ra (mặc định: tự suy từ tên chain)"
+        help="Environment variable name to print (default: auto-inferred from chain name)"
     )
     args = parser.parse_args()
 
-    # Lấy thông tin chain
+    # Get chain info
     try:
         chains = fetch_chainlist()
         chain = find_chain(chains, args.chain)
     except ValueError as e:
-        print(f"❌ Lỗi: {e}", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
     chain_name = chain["name"]
@@ -247,10 +247,10 @@ def main():
     rpc_list = extract_free_rpcs(chain)
     env_var = args.env_var or infer_env_var(chain_name)
 
-    print(f"🔗 Chain: {chain_name} (chainId={chain_id})")
-    print(f"📋 Tìm thấy {len(rpc_list)} RPC HTTPS free")
-    print(f"🔑 Biến môi trường: {env_var}")
-    print(f"⏱  Timeout: {args.timeout}s | Workers: {args.workers}")
+    print(f"Chain: {chain_name} (chainId={chain_id})")
+    print(f"Found {len(rpc_list)} free HTTPS RPCs")
+    print(f"Environment variable: {env_var}")
+    print(f"Timeout: {args.timeout}s | Workers: {args.workers}")
     print("=" * 70)
 
     passed = []
@@ -263,27 +263,27 @@ def main():
         }
         for future in as_completed(futures):
             url, ok, reason = future.result()
-            status = "✅ PASS" if ok else "❌ FAIL"
+            status = "PASS" if ok else "FAIL"
             print(f"{status} | {url}")
             if not ok:
-                print(f"       Lý do: {reason}")
+                print(f"       Reason: {reason}")
             if ok:
                 passed.append(url)
             else:
                 failed.append((url, reason))
 
     print("\n" + "=" * 70)
-    print(f"\n📊 Kết quả: {len(passed)} PASS / {len(failed)} FAIL / {len(rpc_list)} total\n")
+    print(f"\nResults: {len(passed)} PASS / {len(failed)} FAIL / {len(rpc_list)} total\n")
 
     if not passed:
-        print("⚠️  Không có RPC nào pass!", file=sys.stderr)
+        print("Warning: No RPCs passed!", file=sys.stderr)
         sys.exit(1)
 
-    print("✅ RPC đạt yêu cầu:")
+    print("RPCs that passed:")
     for url in passed:
         print(f"   {url}")
     print()
-    print(f"# Thêm dòng sau vào chainslake-run/.env:")
+    print(f"# Add the following line to chainslake-run/.env:")
     print(f"{env_var}=" + ",".join(passed))
 
 

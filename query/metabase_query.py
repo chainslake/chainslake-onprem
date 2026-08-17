@@ -6,7 +6,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(script_dir, '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
-# Database IDs trong Metabase (thay đổi nếu setup lại từ đầu)
+# Database IDs in Metabase (change if re-setup from scratch)
 DATABASES = {
     'spark': 2,
     'trino': 3,
@@ -16,20 +16,20 @@ METABASE_URL = os.getenv('METABASE_URL', 'http://localhost:53000')
 
 
 def _extract_error(resp):
-    """Trích xuất thông báo lỗi rõ ràng từ Metabase response."""
+    """Extract clear error message from Metabase response."""
     try:
         body = resp.json()
     except Exception:
         return resp.text
 
-    # Lỗi từ Spark/Trino qua Metabase
+    # Errors from Spark/Trino via Metabase
     via = body.get('via', [])
     for item in via:
         error_msg = item.get('error', '')
         if error_msg:
-            # Cắt bỏ Java stack trace, chỉ giữ dòng đầu chứa thông báo lỗi
+            # Truncate Java stack trace, keep only the first line with the error message
             first_line = error_msg.split('\n')[0].strip()
-            # Bỏ prefix nếu có (vd: "Error executing query: org.apache.hive...")
+            # Remove prefix if present (e.g.: "Error executing query: org.apache.hive...")
             if ': ' in first_line:
                 parts = first_line.split(': ', 2)
                 if len(parts) >= 3:
@@ -38,7 +38,7 @@ def _extract_error(resp):
                     first_line = parts[1]
             return first_line
 
-    # Lỗi từ Metabase trực tiếp
+    # Errors from Metabase directly
     errors = body.get('errors', [])
     if errors:
         return '; '.join(errors)
@@ -52,14 +52,14 @@ def _extract_error(resp):
 
 def exe_query(sql, engine='spark'):
     """
-    Thực thi SQL qua Metabase API.
+    Execute SQL via Metabase API.
 
     Args:
-        sql: Câu truy vấn SQL
-        engine: 'spark' hoặc 'trino'
+        sql: SQL query statement
+        engine: 'spark' or 'trino'
 
     Returns:
-        dict với 'rows' và 'cols'
+        dict with 'rows' and 'cols'
     """
     database_id = DATABASES.get(engine)
     if database_id is None:

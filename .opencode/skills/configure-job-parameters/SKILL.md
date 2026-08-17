@@ -1,38 +1,38 @@
 ---
 name: configure-job-parameters
-description: Cấu hình các tham số quan trọng của job/pipeline: number_block_per_partition, max_number_partition, max_time_run, start_date, run_mode, backfill
+description: Configure key job/pipeline parameters: number_block_per_partition, max_number_partition, max_time_run, start_date, run_mode, backfill
 ---
 
 # Skill: Configure Job/Pipeline Parameters
 
-## Mô tả
-Hướng dẫn cấu hình các tham số quan trọng của job/pipeline trong Chainslake: `number_block_per_partition`, `max_number_partition`, `max_time_run`, `start_date` trên DAG, `run_mode`, và backfill job mới.
+## Description
+Guide to configuring key parameters for jobs/pipelines in Chainslake: `number_block_per_partition`, `max_number_partition`, `max_time_run`, `start_date` on DAG, `run_mode`, and backfilling new jobs.
 
-## Điều kiện áp dụng
-- Khi thiết lập pipeline mới cho một chain
-- Khi cần tối ưu lại tham số của pipeline đã có
-- Khi thêm job mới vào DAG đã chạy được một thời gian
-- Khi cần cấu hình `start_date` hoặc chuyển `run_mode`
+## When to Use
+- When setting up a new pipeline for a chain
+- When optimizing parameters for an existing pipeline
+- When adding a new job to a DAG that has been running for a while
+- When configuring `start_date` or switching `run_mode`
 
-## Tham số cấu hình quan trọng
+## Key Configuration Parameters
 
-Các tham số này có thể được cấu hình ở **2 nơi**:
-1. **`application.properties`** — cấu hình chung cho toàn pipeline
-2. **Trong file `.sh`** của job — thông qua `--conf "spark.app_properties.<tham_số>=<giá_trị>"`
+These parameters can be configured in **2 places**:
+1. **`application.properties`** — common configuration for the entire pipeline
+2. **In the `.sh` file** of the job — via `--conf "spark.app_properties.<parameter>=<value>"`
 
-**Thứ tự ưu tiên**: Nếu cả 2 nơi đều có, job sẽ sử dụng giá trị trong file `.sh`.
+**Priority order**: If both places have a value, the job will use the value from the `.sh` file.
 
 ---
 
-## Các bước thực hiện
+## Implementation Steps
 
-### Bước 1: Cấu hình `number_block_per_partition`
+### Step 1: Configure `number_block_per_partition`
 
-Mục tiêu: mỗi partition xử lý ~1 giờ dữ liệu (+ 5% buffer).
+Goal: each partition processes ~1 hour of data (+ 5% buffer).
 
-#### Cách 1: Ước tính từ Internet (khi setup mới)
+#### Method 1: Estimate from Internet (for new setups)
 
-Tra cứu tốc độ block trung bình của chain và tính toán:
+Look up the chain's average block time and calculate:
 
 | Chain | Block time | number_block_per_partition |
 |---|---|---|
@@ -40,60 +40,60 @@ Tra cứu tốc độ block trung bình của chain và tính toán:
 | BNB | ~3s/block | 1000 |
 | Polygon | ~2s/block | 1500 |
 
-Công thức: `number_block_per_partition = (3600 / block_time_seconds) * 1.05`
+Formula: `number_block_per_partition = (3600 / block_time_seconds) * 1.05`
 
-#### Cách 2: Tính chính xác từ dữ liệu thực (sau khi đã chạy 1-2 lần)
+#### Method 2: Calculate accurately from real data (after 1-2 runs)
 
-Sử dụng query để đếm số block thực tế trong 1 giờ:
+Use a query to count the actual number of blocks in 1 hour:
 
 ```sql
--- Đếm số block trong mỗi giờ (dùng bảng transaction_blocks)
+-- Count blocks per hour (using transaction_blocks table)
 SELECT
     hour(from_unixtime(block_time)) as block_hour,
     count(*) as blocks_per_hour
 FROM <chain>_origin.transaction_blocks
-WHERE block_time >= unix_timestamp('<ngày_bắt_đầu>')
-  AND block_time < unix_timestamp('<ngày_kết_thúc>')
+WHERE block_time >= unix_timestamp('<start_date>')
+  AND block_time < unix_timestamp('<end_date>')
 GROUP BY hour(from_unixtime(block_time))
 ORDER BY block_hour
 ```
 
-Hoặc cách đơn giản hơn:
+Or a simpler approach:
 
 ```sql
--- Lấy min/max block trong 1 giờ cụ thể
+-- Get min/max blocks in a specific hour
 SELECT
     min(block_number) as min_block,
     max(block_number) as max_block,
     (max(block_number) - min(block_number)) as blocks_in_hour
 FROM <chain>_origin.transaction_blocks
-WHERE block_time >= unix_timestamp('<ngày> 00:00:00')
-  AND block_time < unix_timestamp('<ngày> 01:00:00')
+WHERE block_time >= unix_timestamp('<date> 00:00:00')
+  AND block_time < unix_timestamp('<date> 01:00:00')
 ```
 
-Sau khi có số block trung bình/giờ, nhân thêm 5% buffer:
+Once you have the average blocks/hour, add 5% buffer:
 ```
 number_block_per_partition = blocks_per_hour * 1.05
 ```
 
-**Lưu ý quan trọng**: Đảm bảo có đủ data trong 1 giờ được chọn để tính (không lấy giờ bị thiếu data).
+**Important note**: Ensure the selected hour has complete data (don't pick an hour with missing data).
 
-#### Quy trình tốt nhất khi setup chain mới
+#### Best Practice for New Chain Setup
 
-1. Lấy giá trị ước tính từ Internet (Bước 1 - Cách 1)
-2. Set `max_number_partition=1`, `max_time_run=2` trong `application.properties`
-3. Chạy job origin 1-2 lần để có dữ liệu
-4. Query để tính chính xác `number_block_per_partition` (Bước 1 - Cách 2)
-5. Cập nhật lại `application.properties` với giá trị chính xác
+1. Get estimated value from Internet (Step 1 - Method 1)
+2. Set `max_number_partition=1`, `max_time_run=2` in `application.properties`
+3. Run origin job 1-2 times to get data
+4. Query to calculate exact `number_block_per_partition` (Step 1 - Method 2)
+5. Update `application.properties` with the exact value
 
-#### Áp dụng cấu hình
+#### Applying the Configuration
 
-**Trong `application.properties`:**
+**In `application.properties`:**
 ```properties
 number_block_per_partition=300
 ```
 
-**Hoặc trong file `.sh` (override `application.properties`):**
+**Or in the `.sh` file (overrides `application.properties`):**
 ```bash
 $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.evm.Main \
     --name EthereumOriginTransactionBlocks \
@@ -103,23 +103,23 @@ $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.evm.Main \
 
 ---
 
-### Bước 2: Cấu hình `max_number_partition`
+### Step 2: Configure `max_number_partition`
 
-Tham số này quyết định bao nhiêu partitions được xử lý **đồng thời** trong 1 vòng lặp.
+This parameter determines how many partitions are processed **simultaneously** in one iteration.
 
-#### Xác định tài nguyên hiện tại
+#### Identify Current Resources
 
-Kiểm tra cấu hình Spark hiện tại trong `chainslake-run.sh`:
+Check the current Spark configuration in `chainslake-run.sh`:
 
 ```bash
 cat chainslake-run.sh
 ```
 
-Chú ý 2 tham số:
-- `--master local[N]` — số N = số threads (đọc song song)
-- `--driver-memory Xg` — bộ nhớ cấp cho driver
+Note 2 parameters:
+- `--master local[N]` — N = number of threads (parallel reads)
+- `--driver-memory Xg` — memory allocated to driver
 
-Ví dụ hiện tại:
+Current example:
 ```bash
 spark-submit --master local[2] \
     --driver-memory 4g \
@@ -127,18 +127,18 @@ spark-submit --master local[2] \
 ```
 → 2 threads, 4GB memory
 
-#### Tính memory cần thiết cho 1 partition
+#### Calculate Memory Needed for 1 Partition
 
-Bước 1: Xác định dung lượng 1 partition dữ liệu:
+Step 1: Determine partition data size:
 
 ```sql
--- Xem dung lượng bảng (tổng)
+-- Check table size (total)
 DESCRIBE DETAIL <chain>_origin.transaction_blocks;
--- Tìm trường sizeInBytes
+-- Find the sizeInBytes field
 ```
 
 ```sql
--- Nếu bảng partition theo block_number, ước tính dung lượng 1 partition
+-- If table is partitioned by block_number, estimate 1 partition size
 SELECT
     count(*) as total_rows,
     pg_total_relation_size('<chain>_origin.transaction_blocks') / count(*) as avg_row_bytes
@@ -146,36 +146,36 @@ FROM <chain>_origin.transaction_blocks
 LIMIT 1;
 ```
 
-Bước 2: Ước tính dung lượng 1 partition:
+Step 2: Estimate 1 partition size:
 ```
 memory_per_partition ≈ (number_of_partitions × avg_row_bytes × rows_per_partition) / 1024^3
 ```
 
-Bước 3: Tính `max_number_partition`:
+Step 3: Calculate `max_number_partition`:
 ```
 max_number_partition = floor(available_memory_gb / memory_per_partition_gb)
 ```
 
-**Lưu ý**: Memory cần > dung lượng data đọc + dung lượng data ghi. Luôn để buffer ~30%.
+**Note**: Memory needs to be > data read size + data write size. Always keep ~30% buffer.
 
-#### Quy tắc nhanh
+#### Quick Rules
 
-| Tài nguyên | max_number_partition khuyến nghị |
+| Resources | Recommended max_number_partition |
 |---|---|
-| `local[2]` + `4g` | 1-4 (tùy dung lượng partition) |
+| `local[2]` + `4g` | 1-4 (depends on partition size) |
 | `local[4]` + `8g` | 2-8 |
 | `local[8]` + `16g` | 4-16 |
 
-**Quy tắc quan trọng**: Đối với job dùng `frequent_type=day` trong SQL header, `max_number_partition` **PHẢI >= 24** (vì mỗi ngày có 24 giờ, mỗi giờ là 1 partition).
+**Important rule**: For jobs using `frequent_type=day` in the SQL header, `max_number_partition` **MUST be >= 24** (because each day has 24 hours, each hour is 1 partition).
 
-#### Áp dụng cấu hình
+#### Applying the Configuration
 
-**Trong `application.properties`:**
+**In `application.properties`:**
 ```properties
 max_number_partition=1
 ```
 
-**Hoặc trong file `.sh`:**
+**Or in the `.sh` file:**
 ```bash
 $CHAINSLAKE_RUN_DIR/chainslake-run.sh ... \
     --conf "spark.app_properties.max_number_partition=24" \
@@ -184,111 +184,111 @@ $CHAINSLAKE_RUN_DIR/chainslake-run.sh ... \
 
 ---
 
-### Bước 3: Cấu hình `max_time_run`
+### Step 3: Configure `max_time_run`
 
-Tham số này cho biết số vòng lặp trong 1 lần chạy job.
+This parameter indicates the number of iterations in one job run.
 
-**Mục tiêu**: 1 lần chạy xử lý được **~1 ngày dữ liệu**.
+**Goal**: One run should process **~1 day of data**.
 
-Công thức:
+Formula:
 ```
 max_time_run = ceil(24 / max_number_partition)
 ```
 
-Ví dụ:
-- `max_number_partition=1` → `max_time_run=24` (24 vòng × 1 partition = 24 partitions = 24 giờ = 1 ngày)
-- `max_number_partition=24` → `max_time_run=1` (1 vòng × 24 partitions = 24 giờ = 1 ngày)
-- `max_number_partition=12` → `max_time_run=2` (2 vòng × 12 partitions = 24 giờ = 1 ngày)
+Examples:
+- `max_number_partition=1` → `max_time_run=24` (24 iterations × 1 partition = 24 partitions = 24 hours = 1 day)
+- `max_number_partition=24` → `max_time_run=1` (1 iteration × 24 partitions = 24 hours = 1 day)
+- `max_number_partition=12` → `max_time_run=2` (2 iterations × 12 partitions = 24 hours = 1 day)
 
-**Lưu ý**: Nếu `number_block_per_partition` tương đương ~1 giờ, thì `max_time_run` nên đủ để xử lý 24 giờ (1 ngày).
+**Note**: If `number_block_per_partition` equals ~1 hour, then `max_time_run` should be enough to process 24 hours (1 day).
 
-#### Áp dụng cấu hình
+#### Applying the Configuration
 
-**Trong `application.properties`:**
+**In `application.properties`:**
 ```properties
 max_time_run=1
 ```
 
 ---
 
-### Bước 4: Cấu hình `start_date` và `catchup` trên DAG
+### Step 4: Configure `start_date` and `catchup` on DAG
 
 ```python
 from datetime import datetime, timedelta
 
-# Trong file DAG
+# In DAG file
 with DAG(
     "Ethereum",
-    start_date=datetime.now() - timedelta(days=730),  # ← Mặc định: 2 năm trước ngày hiện tại
-    catchup=False,                                      # ← Không tự chạy lại từ start_date
+    start_date=datetime.now() - timedelta(days=730),  # ← Default: 2 years before current date
+    catchup=False,                                      # ← Don't auto-run from start_date
     ...
 )
 ```
 
-**Cách xác định `start_date`**: Mặc định đặt `start_date` là **2 năm trước ngày hiện tại** (`datetime.now() - timedelta(days=730)`). Nếu người dùng cần dữ liệu sớm hơn, hỏi lại và đặt theo yêu cầu.
+**How to determine `start_date`**: Default is **2 years before the current date** (`datetime.now() - timedelta(days=730)`). If the user needs earlier data, ask and set accordingly.
 
-**`catchup=False`**: Quan trọng — DAG **không tự chạy lại** từ `start_date` đến hiện tại khi mới tạo. Việc backfill dữ liệu lịch sử sẽ được thực hiện thủ công ở **Bước 6**.
+**`catchup=False`**: Important — the DAG **does NOT auto-run** from `start_date` to present when first created. Historical data backfill will be done manually in **Step 6**.
 
-**Lưu ý**: `start_date` phải là **ngày trong quá khứ**. Nếu đặt `start_date` là hôm nay thì Airflow sẽ chỉ chạy từ hôm nay trở đi.
+**Note**: `start_date` must be a **date in the past**. If you set `start_date` to today, Airflow will only run from today onwards.
 
 ---
 
-### Bước 5: Cấu hình `run_mode` (backward/forward)
+### Step 5: Configure `run_mode` (backward/forward)
 
-#### Nguyên tắc
+#### Principles
 
-- **`backward`**: Chạy từ hiện tại về quá khứ (ưu tiên dữ liệu mới). Đồng thời cũng cho phép chạy tiến.
-- **`forward`**: Chỉ cho phép chạy tiến (từ quá khứ đến hiện tại).
+- **`backward`**: Runs from present to past (prioritizes newer data). Also allows running forward.
+- **`forward`**: Only allows running forward (from past to present).
 
-Mặc định: toàn pipeline chạy `backward`.
+Default: entire pipeline runs `backward`.
 
-#### Khi nào cần chuyển `forward`
+#### When to Switch to `forward`
 
-Khi pipeline đã đủ dữ liệu về đến `start_date` và muốn chuyển sang chế độ chạy tiến bình thường.
+When the pipeline has enough data back to `start_date` and you want to switch to normal forward processing.
 
-#### Cách chuyển — CHỈ cần thay đổi ở job đầu tiên
+#### How to Switch — ONLY Need to Change the First Job
 
-**Không cần** thay đổi `run_mode` cho tất cả job. Chỉ cần thay đổi tại job `_origin.transaction_blocks` (job đầu tiên trong pipeline).
+**No need** to change `run_mode` for all jobs. Only change it for the `_origin.transaction_blocks` job (the first job in the pipeline).
 
-**Lý do**: Khi job `_origin.transaction_blocks` dừng chạy backward (tức là đã có dữ liệu đến ngày cần), các job phía sau dù vẫn set `backward` cũng **không thể chạy tiếp về quá khứ** nữa vì không có data mới hơn để xử lý.
+**Reason**: When `_origin.transaction_blocks` stops running backward (meaning data exists up to the needed date), downstream jobs even if still set to `backward` **cannot continue running to the past** because there's no newer data to process.
 
-#### Cach thay đổi
+#### How to Change
 
-**Trong `application.properties`** (thay đổi chung):
+**In `application.properties`** (change globally):
 ```properties
 run_mode=forward
 ```
 
-**Hoặc override trong file `.sh`** (chỉ áp dụng cho 1 job cụ thể):
+**Or override in the `.sh` file** (apply to specific job only):
 ```bash
 $CHAINSLAKE_RUN_DIR/chainslake-run.sh ... \
     --conf "spark.app_properties.run_mode=forward" \
     ...
 ```
 
-**Khuyến nghị**: Sử dụng `--conf` trong file `.sh` của `_origin.transaction_blocks` để chỉ thay đổi job đầu tiên, giữ nguyên các job khác ở `backward`.
+**Recommendation**: Use `--conf` in the `_origin.transaction_blocks` `.sh` file to change only the first job, keeping other jobs at `backward`.
 
 ---
 
-### Bước 6: Backfill job mới thêm vào DAG
+### Step 6: Backfill Newly Added Jobs to DAG
 
-Khi DAG đã hoàn thành chạy dữ liệu về quá khứ, job mới thêm vào **phải tự chạy backfill** để có dữ liệu lịch sử.
+When the DAG has finished backfilling historical data, newly added jobs **must backfill themselves** to get historical data.
 
-#### Sử dụng Airflow CLI
+#### Using Airflow CLI
 
 ```bash
-# Backfill 1 task cụ thể
+# Backfill a specific task
 docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
     "export PS1='something' && source /etc/bash.bashrc && \
      airflow tasks run <DAG_ID> <TASK_ID> <EXECUTION_DATE> --run-backwards"
 
-# Ví dụ: Backfill task bnb_origin.transaction_blocks từ ngày 2025-10-11
+# Example: Backfill task bnb_origin.transaction_blocks from 2025-10-11
 docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
     "export PS1='something' && source /etc/bash.bashrc && \
      airflow tasks run BNB bnb_origin.transaction_blocks 2025-10-11 --run-backwards"
 ```
 
-#### Backfill toàn DAG (nếu cần)
+#### Backfill Entire DAG (if needed)
 
 ```bash
 docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
@@ -296,23 +296,23 @@ docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
      airflow dags backfill -s 2025-10-11 -e <end_date> <DAG_ID>"
 ```
 
-**Lưu ý**:
-- `--run-backwards`: Chạy từ end_date về start_date (backward)
-- Job mới sẽ chạy tuần tự theo dependency, nên các job upstream của nó cũng cần có data
-- Nếu job mới nằm giữa pipeline (ví dụ: job extract mới), cần đảm bảo các job origin upstream đã có data
+**Notes**:
+- `--run-backwards`: Run from end_date to start_date (backward)
+- New jobs will run sequentially according to dependencies, so their upstream jobs must have data
+- If the new job is in the middle of the pipeline (e.g., a new extract job), ensure upstream origin jobs have data
 
 ---
 
-## Ví dụ thực tế
+## Real-world Examples
 
-### Setup mới BNB Chain
+### New BNB Chain Setup
 
 ```properties
 # application.properties
 chain_name=bnb
-number_block_per_partition=1000      # ~3s/block → 1200 blocks/giờ → 1000 (buffer 5%)
+number_block_per_partition=1000      # ~3s/block → 1200 blocks/hour → 1000 (5% buffer)
 max_number_partition=1               # local[2] + 4g
-max_time_run=24                      # 24 vòng × 1 partition = 24 partitions = 1 ngày
+max_time_run=24                      # 24 iterations × 1 partition = 24 partitions = 1 day
 run_mode=backward
 ```
 
@@ -320,11 +320,11 @@ run_mode=backward
 from datetime import datetime, timedelta
 
 # DAG bnb.py
-start_date=datetime.now() - timedelta(days=730),  # Mặc định 2 năm trước
-catchup=False                                      # Không tự chạy lại
+start_date=datetime.now() - timedelta(days=730),  # Default 2 years ago
+catchup=False                                      # Don't auto-run
 ```
 
-Sau khi chạy 1-2 lần, query để tính `number_block_per_partition` chính xác:
+After running 1-2 times, query to calculate exact `number_block_per_partition`:
 
 ```sql
 SELECT
@@ -334,36 +334,36 @@ SELECT
 FROM bnb_origin.transaction_blocks
 WHERE block_time >= unix_timestamp('2025-10-11 00:00:00')
   AND block_time < unix_timestamp('2025-10-11 01:00:00')
--- Kết quả: blocks_count = 1180 → number_block_per_partition = 1180 * 1.05 ≈ 1239
+-- Result: blocks_count = 1180 → number_block_per_partition = 1180 * 1.05 ≈ 1239
 ```
 
-### Chuyển backward → forward
+### Switching backward → forward
 
-Sau khi chạy backfill đủ dữ liệu đến `start_date`:
+After backfilling enough data to `start_date`:
 
 ```properties
-# Trong application.properties của _origin.transaction_blocks (hoặc dùng --conf trong .sh)
+# In application.properties of _origin.transaction_blocks (or use --conf in .sh)
 run_mode=forward
 ```
 
-### Thêm job mới vào DAG đã có data
+### Adding New Job to DAG with Existing Data
 
-Giả sử thêm `bnb.extract.new_table.sh`:
+Suppose adding `bnb.extract.new_table.sh`:
 
-1. Tạo file `.sh` mới
-2. Thêm task vào `bnb.py` DAG
-3. Backfill riêng task mới:
+1. Create new `.sh` file
+2. Add task to `bnb.py` DAG
+3. Backfill the new task only:
 ```bash
 docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
     "export PS1='something' && source /etc/bash.bashrc && \
      airflow tasks run BNB bnb.new_table 2025-10-11 --run-backwards"
 ```
 
-## Lưu ý / Gotchas
+## Notes / Gotchas
 
-- **`number_block_per_partition` phải luôn > 0**: Nếu = 0 job sẽ lỗi hoặc chạy vô tận
-- **`max_number_partition` cho `frequent_type=day`**: Bắt buộc >= 24
-- **Ưu tiên `--conf` trong `.sh`**: Khi muốn thay đổi nhanh 1 job mà không muốn sửa `application.properties` chung
-- **`run_mode=backward` linh hoạt hơn**: Cho phép chạy cả tiến và lùi, nên giữ nguyên ở các job ngoại trừ job origin đầu tiên khi muốn dừng chạy lùi
-- **Backfill cần đúng execution_date**: Phải là ngày mà DAG chưa có dữ liệu, nếu không Airflow sẽ bỏ qua
-- **Memory cần > data read + data write**: Luôn để buffer, đặc biệt với partition lớn
+- **`number_block_per_partition` must always be > 0**: If = 0 the job will error or run indefinitely
+- **`max_number_partition` for `frequent_type=day`**: Must be >= 24
+- **Prefer `--conf` in `.sh`**: When you want to quickly change one job without modifying the shared `application.properties`
+- **`run_mode=backward` is more flexible**: Allows running both forward and backward, so keep it unless you want to stop backward processing on the first origin job
+- **Backfill needs correct execution_date**: Must be a date the DAG doesn't have data for, otherwise Airflow will skip it
+- **Memory needs to be > data read + data write**: Always keep buffer, especially with large partitions

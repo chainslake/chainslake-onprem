@@ -1,13 +1,13 @@
 """
-Set properties của bảng (ALTER TABLE ... SET TBLPROPERTIES) để phục vụ testing.
+Set table properties (ALTER TABLE ... SET TBLPROPERTIES) for testing.
 
-CHỈ cho phép set properties trên bảng có hậu tố `_dev` — bảo vệ production tables.
+ONLY allows setting properties on tables with `_dev` suffix — protects production tables.
 
 Usage:
-    # Set properties theo SQL
+    # Set properties via SQL
     python query/set_table_property.py "ALTER TABLE ethereum.transactions_dev SET TBLPROPERTIES (fromBlock=1000)"
 
-    # Đọc SQL từ file
+    # Read SQL from file
     python query/set_table_property.py -f set_props.sql
 """
 import argparse
@@ -20,9 +20,9 @@ from metabase_query import exe_query
 
 
 def extract_target_table(sql):
-    """Trích xuất tên bảng đích từ câu ALTER TABLE ... SET TBLPROPERTIES.
+    """Extract target table name from ALTER TABLE ... SET TBLPROPERTIES statement.
 
-    Trả về table name hoặc None nếu không khớp.
+    Returns table name or None if no match.
     """
     m = re.match(
         r"^\s*ALTER\s+TABLE\s+([`\"\w.]+\.[`\"\w]+|[`\"\w]+)\s+SET\s+TBLPROPERTIES",
@@ -35,29 +35,29 @@ def extract_target_table(sql):
 
 
 def check_target_is_dev(sql):
-    """Kiểm tra bảng đích trong câu ALTER có hậu tố _dev hay không.
+    """Check if the target table in ALTER statement has _dev suffix.
 
-    Trả về (ok, message).
+    Returns (ok, message).
     """
     table = extract_target_table(sql)
     if table is None:
-        return False, "Câu lệnh không phải ALTER TABLE ... SET TBLPROPERTIES."
+        return False, "Statement is not ALTER TABLE ... SET TBLPROPERTIES."
 
     table_short = table.rsplit('.', 1)[-1]
     if not table_short.endswith('_dev'):
         return False, (
-            f"Bảng đích '{table}' không có hậu tố _dev. "
-            "CHỈ cho phép set properties trên bảng _dev để bảo vệ production."
+            f"Target table '{table}' does not have _dev suffix. "
+            "Only _dev tables are allowed to set properties to protect production."
         )
     return True, table
 
 
 def block_other_statements(sql):
-    """Chặn các câu lệnh khác ngoài SET TBLPROPERTIES trong SQL.
+    """Block statements other than SET TBLPROPERTIES in SQL.
 
-    Trả về (ok, keyword) — keyword là lệnh bị chặn hoặc None.
+    Returns (ok, keyword) — keyword is the blocked command or None.
     """
-    # Chỉ cho phép một câu ALTER ... SET TBLPROPERTIES duy nhất
+    # Only allow a single ALTER ... SET TBLPROPERTIES statement
     rest = re.sub(
         r"^\s*ALTER\s+TABLE\s+[`\"\w.]+\s+SET\s+TBLPROPERTIES",
         "",
@@ -74,44 +74,44 @@ def block_other_statements(sql):
 
 
 def set_table_property(sql, engine='spark'):
-    """Thực thi câu ALTER TABLE ... SET TBLPROPERTIES và in kết quả."""
+    """Execute ALTER TABLE ... SET TBLPROPERTIES and print result."""
     sql = sql.strip()
     if not sql:
-        print("Lỗi: SQL rỗng")
+        print("Error: Empty SQL")
         sys.exit(1)
 
-    # Kiểm tra bảng đích phải có _dev
+    # Check target table has _dev suffix
     ok, info = check_target_is_dev(sql)
     if not ok:
-        print(f"Lỗi: {info}")
+        print(f"Error: {info}")
         sys.exit(1)
     target_table = info
 
-    # Chặn lệnh khác trong SQL
+    # Block other statements in SQL
     is_blocked, keyword = block_other_statements(sql)
     if is_blocked:
-        print(f"Lỗi: Câu lệnh chứa lệnh '{keyword}' và bị chặn.")
-        print("Chỉ cho phép duy nhất một lệnh ALTER TABLE ... SET TBLPROPERTIES trên bảng _dev.")
+        print(f"Error: Statement contains '{keyword}' and is blocked.")
+        print("Only a single ALTER TABLE ... SET TBLPROPERTIES on _dev tables is allowed.")
         sys.exit(1)
 
     print(f"SQL:\n{sql}\n")
     try:
         result = exe_query(sql, engine=engine)
-        print(f"Thành công! Đã set properties cho bảng _dev '{target_table}'.")
+        print(f"Success! Properties set for _dev table '{target_table}'.")
         if result and result.get('rows'):
             for row in result['rows']:
                 print(row)
     except Exception as e:
-        print(f"Lỗi: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Set TBLPROPERTIES cho bảng _dev (CHỈ chấp nhận bảng có hậu tố _dev)"
+        description="Set TBLPROPERTIES for _dev tables (ONLY accepts tables with _dev suffix)"
     )
-    parser.add_argument("sql", nargs='?', help="Câu ALTER SQL (hoặc '-' để đọc từ stdin)")
-    parser.add_argument("-f", "--file", help="Đọc SQL từ file")
+    parser.add_argument("sql", nargs='?', help="ALTER SQL statement (or '-' to read from stdin)")
+    parser.add_argument("-f", "--file", help="Read SQL from file")
     parser.add_argument("--engine", choices=["spark", "trino"], default="spark")
     args = parser.parse_args()
 

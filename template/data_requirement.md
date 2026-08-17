@@ -1,54 +1,52 @@
 # Data Requirement
 
-<<Phần thông tin chung, trình bày dạng bảng>>
-- Ngày tạo
-- Ngày update gần nhất
-- Version: mỗi lần thay đổi sẽ nâng lên 1 số, bắt đầu từ số 1
+<<General information section, presented as table>>
+- Created date
+- Last updated date
+- Version: incremented by 1 on each change, starting from 1
 
 ## Summary
-<<Phần mô tả tóm tắt>>
+<<Brief summary description>>
 
 ## Change log
-<<Phần ghi lại tóm tắt các thay đổi sau mỗi lần update>>
-- [Version] - [Ngày update]: Tóm tắt nội dung thay đổi
+<<Log summarizing changes after each update>>
+- [Version] - [Update date]: Summary of changes
 
 ## User Requirement
-<<Phần thông tin chính làm rõ yêu cầu của User, cần trả lời các câu hỏi dưới đây>>
+<<Main information clarifying User's requirements, answer the following questions>>
 
-- Nhóm câu hỏi để giới hạn phạm vi dữ liệu
-    - User cần dữ liệu của chain nào?
-    - Dữ liệu cần có từ thời gian nào? 1 năm, 2 năm hay toàn bộ lịch sử của chain
-- Nhóm câu hỏi để giới hạn nghiệp vụ:
-    - User quan tâm đến mảng nào trong blockchain?
-        - Defi
+- Questions to limit data scope
+    - Which chain does the User need data for?
+    - What time period is needed? 1 year, 2 years, or entire chain history
+- Questions to limit business domain:
+    - Which area in blockchain is the User interested in?
+        - DeFi
         - NFT
-        - Gamefi
+        - GameFi
         ...
-    - User quan tâm đến những token, contract, hoặc giao thức nào cụ thể hay không, nếu có hãy tìm kiếm các thông tin xung quanh trên internet
-        - Ví dụ với token, contract thì cần tìm thông tin về tên chính xác, contract address, ngày deploy, ABI 
-        - Với giao thức thì cần tìm thông tin về dự án, link tài liệu dự án, github (nếu có), ABI các contract
-        - Cần hỏi lại để User confirm những thông tin này
-- Nhóm câu hỏi để làm rõ yêu cầu
-    - User mong muốn biết điều gì từ dữ liệu?
-    - Hình thức trình bày thông tin như thế nào?
-        - Dạng bảng: gồm những thông tin nào?
-        - Dạng biểu đồ:
-            - Gồm những metrics nào
-            - Nếu như theo thời gian thì cần xem theo ngày, theo giờ, hay tháng...
-    - Tần suất update dữ liệu như thế nào: daily hay hourly hay chỉ cần chạy 1 lần ra kết quả
+    - Is the User interested in specific tokens, contracts, or protocols? If so, research surrounding information on the internet
+        - For tokens/contracts: find exact name, contract address, deployment date, ABI
+        - For protocols: find project information, documentation links, GitHub (if available), contract ABIs
+        - Need to confirm this information with User
+- Questions to clarify requirements
+    - What does the User want to learn from the data?
+    - What presentation format?
+        - Table format: what information should be included?
+        - Chart format:
+            - What metrics?
+            - If time-based: daily, hourly, monthly...
+    - Update frequency: daily, hourly, or just a one-time result
 
 ## Data prototype
 
-<<Từ yêu cầu của người dùng, xây dựng các bảng dữ liệu prototype>>
+<<From User requirements, build prototype data tables>>
 
-- [Tên bảng]: Mô tả bảng sẽ đáp ứng yêu cầu gì
+- [Table name]: Description of what this table will satisfy
 | Column 1 | Column 2 | ... |
 |---|---|---|
-| Ví dụ 1 | Ví dụ 2 | ... |
+| Example 1 | Example 2 | ... |
 
 ## Result Analyst
-<<Phần này do Data Analyst Agent viết>>
+<<This section is written by the Data Analyst Agent>>
 
-Danh sách link Chart, dashboard trên Metabase
-
-
+List of Metabase chart/dashboard links

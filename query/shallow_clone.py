@@ -1,16 +1,16 @@
 """
-Shallow clone bảng Delta Lake — tạo bản copy _dev cho phát triển.
+Shallow clone a Delta Lake table — create a _dev copy for development.
 
-Delta Lake SHALLOW CLONE: chỉ copy metadata, KHÔNG copy data → instant, nhẹ storage.
+Delta Lake SHALLOW CLONE: copies metadata only, NO data copy → instant, lightweight.
 
 Usage:
-    # Shallow clone (khuyến nghị — instant, không copy data)
+    # Shallow clone (recommended — instant, no data copy)
     python query/shallow_clone.py ethereum.transactions
 
-    # Shallow clone với tên custom
+    # Shallow clone with custom target name
     python query/shallow_clone.py ethereum.transactions --target ethereum.transactions_dev
 
-    # Clone + copy N dòng (dùng CTAS — chậm hơn, có copy data)
+    # Clone + copy N rows (uses CTAS — slower, copies data)
     python query/shallow_clone.py ethereum.transactions --limit 10000
 """
 import argparse
@@ -23,12 +23,12 @@ from metabase_query import exe_query
 
 def shallow_clone(source_table, target_table=None, limit=None, engine='spark'):
     """
-    Tạo bản shallow clone của bảng Delta Lake.
+    Create a shallow clone of a Delta Lake table.
 
-    - Không có --limit: dùng Delta SHALLOW CLONE (instant, metadata only)
-    - Có --limit: dùng CREATE TABLE AS SELECT ... LIMIT (copy data)
+    - Without --limit: uses Delta SHALLOW CLONE (instant, metadata only)
+    - With --limit: uses CREATE TABLE AS SELECT ... LIMIT (copies data)
     """
-    # Xác định target table
+    # Determine target table
     if target_table is None:
         parts = source_table.rsplit('.', 1)
         if len(parts) == 2:
@@ -36,21 +36,21 @@ def shallow_clone(source_table, target_table=None, limit=None, engine='spark'):
         else:
             target_table = f"{source_table}_dev"
 
-    # Kiểm tra source table tồn tại
+    # Check source table exists
     try:
         exe_query(f"SELECT 1 FROM {source_table} LIMIT 1", engine=engine)
     except Exception:
-        print(f"Lỗi: Bảng nguồn '{source_table}' không tồn tại hoặc không truy cập được.")
+        print(f"Error: Source table '{source_table}' does not exist or is not accessible.")
         sys.exit(1)
 
-    # Lấy schema để hiển thị
+    # Get schema for display
     try:
         desc = exe_query(f"DESCRIBE TABLE {source_table}", engine=engine)
         col_count = len(desc['rows']) if desc and desc.get('rows') else '?'
     except Exception:
         col_count = '?'
 
-    # Xác định chế độ
+    # Determine mode
     if limit:
         mode = f"CTAS + LIMIT {limit}"
         sql = f"CREATE TABLE {target_table} AS SELECT * FROM {source_table} LIMIT {limit}"
@@ -58,37 +58,37 @@ def shallow_clone(source_table, target_table=None, limit=None, engine='spark'):
         mode = "Delta SHALLOW CLONE (metadata only)"
         sql = f"CREATE TABLE {target_table} SHALLOW CLONE {source_table}"
 
-    # Hiển thị thông tin
+    # Display info
     print(f"=== Shallow Clone ===")
     print(f"  Source:  {source_table}")
     print(f"  Target:  {target_table}")
     print(f"  Columns: {col_count}")
     print(f"  Mode:    {mode}")
 
-    # Kiểm tra target đã tồn tại chưa
+    # Check if target already exists
     try:
         exe_query(f"SELECT 1 FROM {target_table} LIMIT 1", engine=engine)
-        print(f"\nCảnh báo: Bảng '{target_table}' đã tồn tại và sẽ bị GHI ĐÈ.")
+        print(f"\nWarning: Table '{target_table}' already exists and will be OVERWRITTEN.")
     except Exception:
         pass
 
-    # Thực thi
-    print(f"\nĐang thực thi...")
+    # Execute
+    print(f"\nExecuting...")
     try:
         exe_query(sql, engine=engine)
     except Exception as e:
-        print(f"Lỗi khi clone bảng: {e}")
+        print(f"Error cloning table: {e}")
         sys.exit(1)
 
     # Verify
     try:
         result = exe_query(f"SELECT count(*) as total FROM {target_table}", engine=engine)
         total = result['rows'][0][0] if result and result.get('rows') else '?'
-        print(f"Thành công! Bảng '{target_table}' đã được tạo với {total} dòng.")
+        print(f"Success! Table '{target_table}' created with {total} rows.")
     except Exception:
-        print(f"Thành công! Bảng '{target_table}' đã được tạo.")
+        print(f"Success! Table '{target_table}' created.")
 
-    # Hiển thị tblproperties quan trọng từ source
+    # Show important tblproperties from source
     try:
         props = exe_query(f"SHOW TBLPROPERTIES {source_table}", engine=engine)
         if props and props.get('rows'):
@@ -97,7 +97,7 @@ def shallow_clone(source_table, target_table=None, limit=None, engine='spark'):
                 if row[0] in ('frequenceType', 'fromBlock', 'toBlock', 'fromEpochSecond', 'toEpochSecond'):
                     important[row[0]] = row[1]
             if important:
-                print(f"\nTblproperties từ source (cần set lại cho target nếu cần):")
+                print(f"\nTblproperties from source (may need to be re-set for target):")
                 for k, v in important.items():
                     print(f"  {k} = {v}")
     except Exception:
@@ -108,11 +108,11 @@ def shallow_clone(source_table, target_table=None, limit=None, engine='spark'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Shallow clone bảng Delta Lake (metadata only, instant)"
+        description="Shallow clone a Delta Lake table (metadata only, instant)"
     )
-    parser.add_argument("source", help="Bảng nguồn (ví dụ: ethereum.transactions)")
-    parser.add_argument("--target", help="Bảng đích (mặc định: thêm _dev suffix)")
-    parser.add_argument("--limit", type=int, help="Số dòng tối đa (dùng CTAS thay vì SHALLOW CLONE)")
+    parser.add_argument("source", help="Source table (e.g.: ethereum.transactions)")
+    parser.add_argument("--target", help="Target table (default: append _dev suffix)")
+    parser.add_argument("--limit", type=int, help="Max rows (uses CTAS instead of SHALLOW CLONE)")
     parser.add_argument("--engine", choices=["spark", "trino"], default="spark")
     args = parser.parse_args()
 

@@ -1,16 +1,16 @@
 # User Acceptance Testing
 
-## [shema].[table]
+## [schema].[table]
 
 - Job config
     - number_block_per_partition:
     - max_number_partition: 24
     - max_time_run: 5
     - run_mode: backward
-- Resource config <<nếu job không chạy thành công do thiếu tài nguyên thì cần điều chỉnh lại>>
+- Resource config <<adjust if job fails due to insufficient resources>>
     --master local[2]
     --driver-memory 4g
 - Result
-    - fromBlock - toBlock hoặc fromDate -> toDate (tính ra từ fromEpochSecond, toEpochSecond)
+    - fromBlock - toBlock or fromDate -> toDate (calculated from fromEpochSecond, toEpochSecond)
     - Time to run (minute):
     - Output size of table (MB): 

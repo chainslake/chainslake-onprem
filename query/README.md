@@ -1,44 +1,44 @@
 # Query Scripts
 
-Bộ script Python để tương tác với Data Warehouse thông qua Metabase API.
+Python scripts for interacting with the Data Warehouse via Metabase API.
 
-## Cài đặt
+## Installation
 
-### 1. Cài đặt thư viện
+### 1. Install Libraries
 
 ```bash
 pip install requests python-dotenv
 ```
 
-### 2. Cấu hình API Key
+### 2. Configure API Key
 
-Tạo file `.env` trong cùng thư mục với nội dung:
+Create a `.env` file in the same directory with:
 
 ```
-METABASE_API_KEY=<API key của bạn>
+METABASE_API_KEY=<your API key>
 ```
 
-Để tạo API key, truy cập: `http://localhost:53000/admin/settings/authentication`
+To create an API key, visit: `http://localhost:53000/admin/settings/authentication`
 
 ---
 
 ## Scripts
 
-### `get_example_table.py` — Lấy bản ghi mẫu từ bảng
+### `get_example_table.py` — Fetch Sample Records from Table
 
-Truy vấn 1 bản ghi từ bảng để xem schema và dữ liệu mẫu.
+Query 1 record from a table to view schema and sample data.
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python get_example_table.py <tên_bảng>
+python get_example_table.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python get_example_table.py ethereum.transactions
 ```
 
-**Kết quả trả về:**
+**Returned Result:**
 ```json
 {
   "rows": [["0xabc...", 1234567, ...]],
@@ -51,82 +51,82 @@ python get_example_table.py ethereum.transactions
 
 ---
 
-### `query_table.py` — Thực thi câu truy vấn SQL
+### `query_table.py` — Execute SQL Query
 
-Thực thi câu truy vấn SELECT trên Data Warehouse. Script sẽ:
-- **Chặn** các câu truy vấn có thể thay đổi dữ liệu (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `MERGE`)
-- **Yêu cầu** câu truy vấn phải có mệnh đề `LIMIT`
+Execute a SELECT query on the Data Warehouse. The script will:
+- **Block** queries that can modify data (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `MERGE`)
+- **Require** queries to have a `LIMIT` clause
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python query_table.py "<câu_truy_vấn_SQL>"
+python query_table.py "<SQL_query>"
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python query_table.py "SELECT * FROM ethereum.transactions LIMIT 10"
 python query_table.py "SELECT hash, block_number FROM ethereum.transactions WHERE block_number > 1000000 LIMIT 50"
 ```
 
-**Lỗi khi thiếu LIMIT:**
+**Error when missing LIMIT:**
 ```
-Lỗi: Câu truy vấn phải có mệnh đề LIMIT để giới hạn số bản ghi trả về.
-Ví dụ: SELECT * FROM ethereum.transactions LIMIT 100
+Error: Query must have a LIMIT clause to restrict the number of records returned.
+Example: SELECT * FROM ethereum.transactions LIMIT 100
 ```
 
-**Lỗi khi dùng lệnh destructive:**
+**Error when using destructive commands:**
 ```
-Lỗi: Câu truy vấn chứa lệnh 'DROP' có thể thay đổi dữ liệu và bị chặn.
-Chỉ cho phép các câu truy vấn SELECT (read-only).
+Error: Query contains 'DROP' command that may modify data and is blocked.
+Only SELECT queries (read-only) are allowed.
 ```
 
 ---
 
-### `drop_table.py` — Xóa bảng
+### `drop_table.py` — Drop Table
 
-Xóa một bảng khỏi Data Warehouse. Script yêu cầu xác nhận trước khi thực hiện để tránh xóa nhầm.
+Drop a table from the Data Warehouse. Requires confirmation before execution to prevent accidental deletion.
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python drop_table.py <tên_bảng>
+python drop_table.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python drop_table.py ethereum.transactions
 ```
 
-**Quy trình xác nhận:**
+**Confirmation Process:**
 ```
-Bạn có chắc chắn muốn xóa bảng 'ethereum.transactions'? Nhập tên bảng để xác nhận: ethereum.transactions
-Đã xóa bảng 'ethereum.transactions' thành công.
+Are you sure you want to drop table 'ethereum.transactions'? Enter table name to confirm: ethereum.transactions
+Table 'ethereum.transactions' has been dropped successfully.
 ```
 
-Nếu nhập sai tên bảng, thao tác sẽ bị hủy:
+If the wrong table name is entered, the operation is cancelled:
 ```
-Bạn có chắc chắn muốn xóa bảng 'ethereum.transactions'? Nhập tên bảng để xác nhận: abc
-Xác nhận không khớp. Hủy thao tác xóa bảng.
+Are you sure you want to drop table 'ethereum.transactions'? Enter table name to confirm: abc
+Confirmation does not match. Drop operation cancelled.
 ```
 
 ---
 
-### `check_table_properties.py` — Kiểm tra properties của bảng
+### `check_table_properties.py` — Check Table Properties
 
-Hiển thị tblproperties của bảng trên Data Warehouse. Đặc biệt useful khi kiểm tra trạng thái lock và phạm vi dữ liệu.
+Display tblproperties of a table on the Data Warehouse. Particularly useful for checking lock status and data range.
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python check_table_properties.py <tên_bảng>
+python check_table_properties.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python check_table_properties.py ethereum.blocks
 ```
 
-**Kết quả trả về:**
+**Returned Result:**
 ```
-=== tblproperties của 'ethereum.blocks' ===
+=== tblproperties of 'ethereum.blocks' ===
 
 Property                        Value
 --------------------------------------------------------------------------------
@@ -135,121 +135,121 @@ frequenceType                   block
 fromBlock                       12345678
 toBlock                         12345999
 
-=== Property quan trọng ===
+=== Important Properties ===
 
-  isLock (ĐÃ MỞ KHÓA): 0
+  isLock (UNLOCKED): 0
   frequenceType: block
   fromBlock: 12345678
   toBlock: 12345999
 ```
 
-**Các property quan trọng:**
-| Property | Mô tả |
+**Important Properties:**
+| Property | Description |
 |---|---|
-| `isLock` | Trạng thái khóa: 1 = bị khóa (job đang ghi), 0 = mở khóa |
-| `frequenceType` | Loại tần suất: `block`, `hour`, `minute`, `day` |
-| `fromBlock`, `toBlock` | Phạm vi block hiện có (nếu frequenceType=block) |
-| `fromEpochSecond`, `toEpochSecond` | Phạm vi epoch second hiện có (nếu frequenceType là minute/hour/day) |
+| `isLock` | Lock status: 1 = locked (job is writing), 0 = unlocked |
+| `frequenceType` | Frequency type: `block`, `hour`, `minute`, `day` |
+| `fromBlock`, `toBlock` | Current block range (if frequenceType=block) |
+| `fromEpochSecond`, `toEpochSecond` | Current epoch second range (if frequenceType is minute/hour/day) |
 
 ---
 
-### `unlock_table.py` — Mở khóa bảng
+### `unlock_table.py` — Unlock Table
 
-Mở khóa bảng khi job bị lỗi "Table is Lock". Yêu cầu xác nhận trước khi thực hiện.
+Unlock a table when a job errors with "Table is Lock". Requires confirmation before execution.
 
-**⚠️ Lưu ý:** Chỉ sử dụng khi chắc chắn không còn job nào đang ghi dữ liệu vào bảng.
+**⚠️ Note:** Only use when you are certain no job is currently writing to the table.
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python unlock_table.py <tên_bảng>
+python unlock_table.py <table_name>
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 python unlock_table.py ethereum.blocks
 ```
 
-**Quy trình xác nhận:**
+**Confirmation Process:**
 ```
-⚠️  Bạn sắp mở khóa bảng 'ethereum.blocks'.
-    Lệnh sẽ thực thi: ALTER TABLE ethereum.blocks SET TBLPROPERTIES (isLock=0)
+⚠️  You are about to unlock table 'ethereum.blocks'.
+    Command to execute: ALTER TABLE ethereum.blocks SET TBLPROPERTIES (isLock=0)
 
-Nhập tên bảng để xác nhận: ethereum.blocks
-✅ Đã mở khóa bảng 'ethereum.blocks' thành công.
+Enter table name to confirm: ethereum.blocks
+✅ Table 'ethereum.blocks' has been unlocked successfully.
 ```
 
-### `insert_dev_data.py` — Insert data vào bảng `_dev`
+### `insert_dev_data.py` — Insert Data into `_dev` Table
 
-Insert dữ liệu vào bảng có hậu tố `_dev` để phục vụ testing (thêm dữ liệu edge case, chuẩn bị dữ liệu test...). Script **CHỈ cho phép** insert vào bảng `_dev` — bảng production sẽ bị chặn. Nếu câu INSERT dạng `SELECT` thì **bắt buộc phải có `LIMIT`**.
+Insert data into tables with `_dev` suffix for testing purposes (add edge case data, prepare test data, etc.). The script **ONLY allows** inserting into `_dev` tables — production tables are blocked. If the INSERT uses `SELECT`, it **must have `LIMIT`**.
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python insert_dev_data.py "<câu_INSERT_SQL>"
+python insert_dev_data.py "<INSERT_SQL>"
 python insert_dev_data.py -f insert.sql
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
-# Insert theo VALUES
+# Insert using VALUES
 python insert_dev_data.py "INSERT INTO ethereum.transactions_dev (hash, block_number) VALUES ('0xabc', 123)"
 
-# Insert từ SELECT (bắt buộc có LIMIT)
+# Insert from SELECT (must have LIMIT)
 python insert_dev_data.py "INSERT INTO ethereum.transactions_dev SELECT * FROM ethereum.transactions_dev LIMIT 10"
 
-# Insert Overwrite (bắt buộc có LIMIT nếu dùng SELECT)
+# Insert Overwrite (must have LIMIT if using SELECT)
 python insert_dev_data.py "INSERT OVERWRITE ethereum.transactions_dev SELECT * FROM ethereum.transactions_dev LIMIT 10"
 ```
 
-**Lỗi khi insert vào bảng production (không có `_dev`):**
+**Error when inserting into production table (no `_dev`):**
 ```
-Lỗi: Bảng đích 'ethereum.transactions' không có hậu tố _dev. CHỈ cho phép insert vào bảng _dev để bảo vệ production.
+Error: Target table 'ethereum.transactions' does not have _dev suffix. Only inserts into _dev tables are allowed to protect production.
 ```
 
-**Lỗi khi INSERT dạng SELECT thiếu LIMIT:**
+**Error when INSERT SELECT is missing LIMIT:**
 ```
-Lỗi: Câu INSERT dạng SELECT phải có mệnh đề LIMIT để giới hạn số bản ghi.
+Error: INSERT SELECT statement must have a LIMIT clause to restrict the number of records.
 ```
 
 ---
 
-### `set_table_property.py` — Set properties của bảng `_dev`
+### `set_table_property.py` — Set Properties on `_dev` Table
 
-Set TBLPROPERTIES cho bảng có hậu tố `_dev` để phục vụ testing (điều chỉnh `fromBlock`, `toBlock`, `isLock`, `frequenceType`...). Script **CHỈ cho phép** set trên bảng `_dev` — bảng production sẽ bị chặn.
+Set TBLPROPERTIES on tables with `_dev` suffix for testing purposes (adjust `fromBlock`, `toBlock`, `isLock`, `frequenceType`, etc.). The script **ONLY allows** setting on `_dev` tables — production tables are blocked.
 
-**Cú pháp:**
+**Syntax:**
 ```bash
-python set_table_property.py "<câu_ALTER_SQL>"
+python set_table_property.py "<ALTER_SQL>"
 python set_table_property.py -f set_props.sql
 ```
 
-**Ví dụ:**
+**Example:**
 ```bash
 # Set fromBlock
 python set_table_property.py "ALTER TABLE ethereum.transactions_dev SET TBLPROPERTIES (fromBlock=1000)"
 
-# Set nhiều properties
+# Set multiple properties
 python set_table_property.py "ALTER TABLE ethereum.transactions_dev SET TBLPROPERTIES (fromBlock=1000, toBlock=2000)"
 ```
 
-**Lỗi khi set trên bảng production (không có `_dev`):**
+**Error when setting on production table (no `_dev`):**
 ```
-Lỗi: Bảng đích 'ethereum.transactions' không có hậu tố _dev. CHỈ cho phép set properties trên bảng _dev để bảo vệ production.
+Error: Target table 'ethereum.transactions' does not have _dev suffix. Only setting properties on _dev tables is allowed to protect production.
 ```
 
 ---
 
-## Cấu trúc project
+## Project Structure
 
 ```
 query/
-├── .env                      # Biến môi trường (API key) — không commit lên git
-├── env_example               # File mẫu cấu hình .env
-├── metabase_query.py         # Module lõi gọi Metabase API
-├── get_example_table.py      # Lấy bản ghi mẫu từ bảng
-├── query_table.py            # Thực thi câu truy vấn SQL (read-only)
-├── drop_table.py             # Xóa bảng (có xác nhận)
-├── check_table_properties.py # Kiểm tra tblproperties của bảng
-├── unlock_table.py           # Mở khóa bảng (set isLock=0)
-├── insert_dev_data.py        # Insert data vào bảng _dev (chỉ _dev)
-└── set_table_property.py     # Set TBLPROPERTIES bảng _dev (chỉ _dev)
+├── .env                      # Environment variables (API key) — not committed to git
+├── env_example               # Example .env configuration file
+├── metabase_query.py         # Core module for calling Metabase API
+├── get_example_table.py      # Fetch sample records from table
+├── query_table.py            # Execute SQL queries (read-only)
+├── drop_table.py             # Drop table (with confirmation)
+├── check_table_properties.py # Check table tblproperties
+├── unlock_table.py           # Unlock table (set isLock=0)
+├── insert_dev_data.py        # Insert data into _dev table (_dev only)
+└── set_table_property.py     # Set TBLPROPERTIES on _dev table (_dev only)
 ```

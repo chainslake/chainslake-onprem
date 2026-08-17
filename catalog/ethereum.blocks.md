@@ -1,14 +1,14 @@
 # ethereum.blocks
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:49:26 |
-| Ngày update gần nhất | 2026-08-08 16:45:20 |
-| Số bản ghi | 2107 |
-| Số file | 7 |
-| Dung lượng | 49.4 KB |
+| Created date | 2026-07-12 15:49:26 |
+| Last updated | 2026-08-08 16:45:20 |
+| Row count | 2107 |
+| File count | 7 |
+| Size | 49.4 KB |
 | frequentType | block |
 | fromBlock | 25516315 |
 | toBlock | 25518421 |

@@ -1,11 +1,11 @@
 """
-Chạy một job pipeline trực tiếp qua docker exec (thay vì chạy thủ công).
+Run a pipeline job directly via docker exec (instead of manual execution).
 
-Agent có thể dùng script này để chạy bất kỳ job nào trong
-`chainslake/jobs/<chain>/<category>/<job>.sh` mà không cần tự soạn
-lệnh `docker exec ...` phức tạp. Output của job được stream trực tiếp
-ra terminal (in dòng theo thời gian thực), exit code trả về bằng exit
-code của job bên trong container.
+Agents can use this script to run any job in
+`chainslake/jobs/<chain>/<category>/<job>.sh` without manually composing
+complex `docker exec ...` commands. Job output is streamed directly
+to the terminal (printed in real-time), exit code is returned as the
+exit code of the job inside the container.
 
 Usage:
     python script/run_job.py ethereum/extract/blocks.sh
@@ -29,26 +29,26 @@ HOST_CHAINSLAKE = Path("/home/long/projects/chainslake-onprem/chainslake")
 CONTAINER = "chainslake-onprem-node01-1"
 USER = "hadoop"
 
-# Path trong container
+# Container path
 CT_CHAINSLAKE = "/home/hadoop/projects/chainslake"
 CT_JOBS = f"{CT_CHAINSLAKE}/jobs"
 
-# Các category chuẩn của pipeline
+# Standard pipeline categories
 CATEGORIES = ["origin", "extract", "decoded", "contract", "token"]
 
-# Path trong container nơi .env của chainslake-run nằm (đã có sẵn trong container)
+# Container path where chainslake-run .env is located (already available in container)
 CT_RUN_DIR = "/home/hadoop/projects/chainslake-run"
 
 
 def resolve_job(job_ref, chain=None):
     """
-    Phân tích job reference thành (chain, category, job_name, sh_path_host).
+    Parse job reference into (chain, category, job_name, sh_path_host).
 
-    Hỗ trợ các format:
+    Supported formats:
       - ethereum/extract/blocks.sh
       - ethereum/extract/blocks
       - ethereum.extract.blocks
-      - blocks --chain ethereum   (nếu --chain được truyền)
+      - blocks --chain ethereum   (if --chain is provided)
     """
     ref = job_ref.strip()
     parts = None
@@ -60,14 +60,14 @@ def resolve_job(job_ref, chain=None):
     else:
         parts = [ref]
 
-    # Bỏ đuôi .sh
+    # Strip .sh suffix
     if parts and parts[-1].endswith(".sh"):
         parts[-1] = parts[-1][:-3]
 
     if not parts:
         return None
 
-    # Nếu chỉ có 1 phần và --chain được truyền → tên job, tìm category sau
+    # If only 1 part and --chain is provided → job name, find category after
     if len(parts) == 1 and chain:
         return {
             "chain": chain,
@@ -83,7 +83,7 @@ def resolve_job(job_ref, chain=None):
             "job": parts[2],
         }
 
-    # ethereum/origin → [chain, category] (job tự suy ra nếu category chỉ có 1 file)
+    # ethereum/origin → [chain, category] (job auto-inferred if category has only 1 file)
     if len(parts) == 2 and parts[0] in _existing_chains():
         return {
             "chain": parts[0],
@@ -91,7 +91,7 @@ def resolve_job(job_ref, chain=None):
             "job": None,
         }
 
-    # extract/blocks → cần --chain
+    # extract/blocks → needs --chain
     if len(parts) == 2 and chain:
         return {
             "chain": chain,
@@ -110,39 +110,39 @@ def _existing_chains():
 
 
 def find_job_sh(job_info):
-    """Tìm file .sh thực tế của job trên host."""
+    """Find the actual .sh file of the job on the host."""
     chain = job_info["chain"]
     category = job_info["category"]
     job = job_info["job"]
 
     jobs_dir = HOST_CHAINSLAKE / "jobs" / chain
     if not jobs_dir.exists():
-        print(f"Error: không tìm thấy thư mục jobs: {jobs_dir}")
+        print(f"Error: jobs directory not found: {jobs_dir}")
         return None
 
-    # Nếu job chưa xác định (chỉ có category), tìm file duy nhất trong category
+    # If job not determined (only category), find the single file in category
     if not job:
         cat_dir = jobs_dir / category
         if not cat_dir.exists():
-            print(f"Error: không tìm thấy category: {cat_dir}")
+            print(f"Error: category not found: {cat_dir}")
             return None
         sh_files = sorted(cat_dir.glob("*.sh"))
         if len(sh_files) != 1:
-            print(f"Error: category '{category}' có {len(sh_files)} job scripts, cần chỉ định rõ job:")
+            print(f"Error: category '{category}' has {len(sh_files)} job scripts, please specify a job:")
             for f in sh_files:
                 print(f"  - {f.stem}")
             return None
         job = sh_files[0].stem
         job_info["job"] = job
 
-    # Nếu category chưa xác định (chỉ truyền tên job), tìm trong mọi category
+    # If category not determined (only job name passed), search in all categories
     if not category:
         for cat in CATEGORIES:
             cand = jobs_dir / cat / f"{job}.sh"
             if cand.is_file():
                 job_info["category"] = cat
                 return cand
-        print(f"Error: không tìm thấy job '{job}' trong bất kỳ category nào của {jobs_dir}")
+        print(f"Error: job '{job}' not found in any category of {jobs_dir}")
         return None
 
     candidates = [
@@ -154,13 +154,13 @@ def find_job_sh(job_info):
         if cand.is_file():
             return cand
 
-    print(f"Error: không tìm thấy job script '{job}' trong {jobs_dir / category}")
+    print(f"Error: job script '{job}' not found in {jobs_dir / category}")
     return None
 
 
 def build_remote_cmd(job_info):
     """
-    Build command chạy job bên trong container:
+    Build command to run job inside container:
       cd <CT_JOBS>/<chain> && ./<category>/<job>.sh
     """
     chain = job_info["chain"]
@@ -170,7 +170,7 @@ def build_remote_cmd(job_info):
 
 
 def run_job(job_info, timeout=None, dry_run=False):
-    """Chạy job bên trong container, stream output, trả exit code."""
+    """Run job inside container, stream output, return exit code."""
     remote_cmd = build_remote_cmd(job_info)
 
     full_cmd = (
@@ -191,7 +191,7 @@ def run_job(job_info, timeout=None, dry_run=False):
     print(f"{'=' * 60}")
 
     if dry_run:
-        print("  [DRY RUN] Lệnh docker sẽ chạy:")
+        print("  [DRY RUN] Docker command to be executed:")
         print("  " + shlex.join(docker_cmd))
         return 0
 
@@ -204,7 +204,7 @@ def run_job(job_info, timeout=None, dry_run=False):
             bufsize=1,
         )
     except FileNotFoundError:
-        print("Error: không tìm thấy 'docker' trên host.")
+        print("Error: 'docker' not found on host.")
         return 1
 
     start = None
@@ -217,12 +217,12 @@ def run_job(job_info, timeout=None, dry_run=False):
             sys.stdout.write(line)
             sys.stdout.flush()
             if timeout and time.time() - start > timeout:
-                print(f"\nError: timeout sau {timeout}s, kill job.")
+                print(f"\nError: timeout after {timeout}s, killing job.")
                 proc.kill()
                 proc.wait()
                 return 124
     except KeyboardInterrupt:
-        print("\nInterrupted, kill job...")
+        print("\nInterrupted, killing job...")
         proc.kill()
         proc.wait()
         return 130
@@ -232,7 +232,7 @@ def run_job(job_info, timeout=None, dry_run=False):
 
 
 def list_jobs(chain=None):
-    """Liệt kê tất cả job scripts có sẵn."""
+    """List all available job scripts."""
     jobs_root = HOST_CHAINSLAKE / "jobs"
     chains = [chain] if chain else sorted(d.name for d in jobs_root.iterdir() if d.is_dir())
 
@@ -240,7 +240,7 @@ def list_jobs(chain=None):
     for ch in chains:
         ch_dir = jobs_root / ch
         if not ch_dir.is_dir():
-            print(f"  (chain '{ch}' không tồn tại)")
+            print(f"  (chain '{ch}' does not exist)")
             continue
         print(f"\n[{ch}]")
         for cat in CATEGORIES:
@@ -255,36 +255,36 @@ def list_jobs(chain=None):
                 print(f"    - {f.stem}")
                 found += 1
     if found == 0:
-        print("  (không có job nào)")
+        print("  (no jobs found)")
     return found
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Chạy job pipeline qua docker exec (thay cho chạy thủ công)",
+        description="Run pipeline job via docker exec (instead of manual execution)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Ví dụ:\n"
+            "Examples:\n"
             "  python script/run_job.py ethereum/extract/blocks.sh\n"
             "  python script/run_job.py ethereum.extract.blocks\n"
             "  python script/run_job.py blocks --chain ethereum\n"
             "  python script/run_job.py --list\n"
         ),
     )
-    parser.add_argument("job", nargs="?", help="Job reference, ví dụ: ethereum/extract/blocks.sh hoặc ethereum.extract.blocks")
-    parser.add_argument("--chain", help="Tên chain (cần khi job_ref không có chain)")
-    parser.add_argument("--list", action="store_true", help="Liệt kê tất cả job scripts có sẵn")
-    parser.add_argument("--dry-run", action="store_true", help="Chỉ in lệnh docker sẽ chạy, không thực thi")
-    parser.add_argument("--timeout", type=int, default=None, help="Timeout (giây), kill job nếu quá lâu")
+    parser.add_argument("job", nargs="?", help="Job reference, e.g.: ethereum/extract/blocks.sh or ethereum.extract.blocks")
+    parser.add_argument("--chain", help="Chain name (needed when job_ref doesn't include chain)")
+    parser.add_argument("--list", action="store_true", help="List all available job scripts")
+    parser.add_argument("--dry-run", action="store_true", help="Print docker command without executing")
+    parser.add_argument("--timeout", type=int, default=None, help="Timeout (seconds), kill job if exceeded")
     args = parser.parse_args()
 
-    # Kiểm tra container đang chạy
+    # Check if container is running
     result = subprocess.run(
         ["docker", "ps", "--filter", f"name={CONTAINER}", "--format", "{{.Names}}"],
         capture_output=True, text=True,
     )
     if CONTAINER not in result.stdout:
-        print(f"Error: container '{CONTAINER}' không đang chạy. Hãy `docker compose up -d` trước.")
+        print(f"Error: container '{CONTAINER}' is not running. Please run `docker compose up -d` first.")
         sys.exit(1)
 
     if args.list:
@@ -297,19 +297,19 @@ def main():
 
     job_info = resolve_job(args.job, args.chain)
     if not job_info:
-        print(f"Error: không parse được job reference '{args.job}'.")
-        print("  Format hợp lệ: ethereum/extract/blocks.sh | ethereum.extract.blocks | extract/blocks --chain ethereum")
+        print(f"Error: cannot parse job reference '{args.job}'.")
+        print("  Valid formats: ethereum/extract/blocks.sh | ethereum.extract.blocks | extract/blocks --chain ethereum")
         sys.exit(1)
 
     sh_path = find_job_sh(job_info)
     if sh_path is None:
         sys.exit(1)
 
-    print(f"\n==> Chuẩn bị chạy job: {sh_path}")
+    print(f"\n==> Preparing to run job: {sh_path}")
     rc = run_job(job_info, timeout=args.timeout, dry_run=args.dry_run)
 
     print(f"{'=' * 60}")
-    print(f"Job {'thành công' if rc == 0 else f'kết thúc với exit code {rc}'}")
+    print(f"Job {'succeeded' if rc == 0 else f'ended with exit code {rc}'}")
     sys.exit(rc)
 
 

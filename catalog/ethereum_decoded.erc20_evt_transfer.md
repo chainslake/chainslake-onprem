@@ -1,14 +1,14 @@
 # ethereum_decoded.erc20_evt_transfer
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:49:46 |
-| Ngày update gần nhất | 2026-07-26 16:47:13 |
-| Số bản ghi | 721252 |
-| Số file | 10 |
-| Dung lượng | 50.1 MB |
+| Created date | 2026-07-12 15:49:46 |
+| Last updated | 2026-07-26 16:47:13 |
+| Row count | 721252 |
+| File count | 10 |
+| Size | 50.1 MB |
 | frequentType | block |
 | fromBlock | 25516616 |
 | toBlock | 25518120 |
@@ -89,4 +89,3 @@ select * from ${pre_decode_tables}
   "type": "event"
 }
 ```
-

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Xây dựng lineage.md từ các file design của Data Architect.
+Build lineage.md from Data Architect design files.
 
-Đọc tất cả file markdown trong thư mục design của một bài toán
-(docs/<problem>/design/*.md), trích xuất quan hệ upstream/downstream giữa các
-bảng, xác định trạng thái từng bảng (đã có trong warehouse / cần làm mới), và
-sinh file lineage.md (Mermaid graph + bảng chi tiết) ngay trong thư mục design —
-format tương tự lineage.md của thư mục catalog do build_catalog.py tạo ra.
+Reads all markdown files in a problem's design directory
+(docs/<problem>/design/*.md), extracts upstream/downstream relationships between
+tables, determines table status (exists in warehouse / needs to be built), and
+generates lineage.md (Mermaid graph + detail table) in the same design directory —
+similar format to the lineage.md in the catalog directory created by build_catalog.py.
 
-Nguồn upstream lấy từ row `list_input_tables` trong bảng Header (mục SQL Transform)
-của từng file design; downstream được suy ra bằng cách đảo ngược upstream
-(giống build_catalog.py). Trạng thái bảng được xác định bằng cách truy vấn
-warehouse (Spark), hoặc dùng thư mục catalog khi --offline.
+Upstream sources are taken from the `list_input_tables` row in the Header table (SQL Transform section)
+of each design file; downstream is inferred by reversing upstream
+(same as build_catalog.py). Table status is determined by querying
+the warehouse (Spark), or using the catalog directory when --offline.
 
 Usage:
     python script/build_lineage_from_design.py daily_dex_token_volume
@@ -31,15 +31,15 @@ SCHEMAS_TO_SKIP = {'default'}
 DEV_SUFFIX = '_dev'
 TABLE_REF_RE = re.compile(r'`([^`]+)`')
 
-# Trạng thái bảng
+# Table status
 STATUS_EXISTING = 'existing'
 STATUS_NEW = 'new'
 STATUS_DEV_ONLY = 'dev_only'
 
 STATUS_LABEL = {
-    STATUS_EXISTING: '✅ CÓ',
-    STATUS_NEW: '❌ CẦN LÀM MỚI',
-    STATUS_DEV_ONLY: '🔄 ĐANG DEV (bản _dev)',
+    STATUS_EXISTING: '✅ EXISTS',
+    STATUS_NEW: '❌ NEEDS BUILDING',
+    STATUS_DEV_ONLY: '🔄 IN DEV (_dev version)',
 }
 
 MERMAID_CLASS = {
@@ -57,7 +57,7 @@ def read_lines(path):
 
 
 def parse_table_name(path, lines):
-    """Lấy tên bảng từ heading đầu tiên (# schema.table), fallback: tên file."""
+    """Get table name from first heading (# schema.table), fallback: filename."""
     for line in lines:
         if line.startswith('# '):
             name = line[2:].strip()
@@ -67,7 +67,7 @@ def parse_table_name(path, lines):
 
 
 def parse_header_input_tables(lines):
-    """Lấy danh sách upstream từ row `list_input_tables` trong bảng Header (SQL Transform)."""
+    """Get upstream list from `list_input_tables` row in Header table (SQL Transform)."""
     in_header = False
     for line in lines:
         stripped = line.strip()
@@ -78,7 +78,7 @@ def parse_header_input_tables(lines):
             if stripped.startswith('## '):
                 break
             if stripped.startswith('| list_input_tables'):
-                # Dạng: | list_input_tables | `table1,table2,...` |
+                # Format: | list_input_tables | `table1,table2,...` |
                 parts = [p.strip() for p in stripped.split('|')]
                 if len(parts) >= 3:
                     value = parts[2].strip('`').strip()
@@ -88,7 +88,7 @@ def parse_header_input_tables(lines):
 
 
 def parse_lineage_section(lines, label):
-    """Trích xuất danh sách bảng từ bullet `- **<label> tables**: ...` trong mục ## Lineage."""
+    """Extract table list from bullet `- **<label> tables**: ...` in ## Lineage section."""
     in_lineage = False
     for line in lines:
         stripped = line.strip()
@@ -109,7 +109,7 @@ def parse_lineage_section(lines, label):
 
 
 def parse_design_file(path):
-    """Trích xuất thông tin lineage từ một file design markdown."""
+    """Extract lineage info from a design markdown file."""
     lines = read_lines(path)
     full_name = parse_table_name(path, lines)
 
@@ -130,7 +130,7 @@ def parse_design_file(path):
 # ------------------------------------------------------------ existing tables
 
 def get_warehouse_tables():
-    """Truy vấn warehouse, trả về (bảng production, bảng _dev) dạng set full_name."""
+    """Query warehouse, return (production tables, _dev tables) as full_name sets."""
     result = exe_query("SHOW SCHEMAS", engine='spark')
     schemas = [row[0] for row in result['rows'] if row[0] not in SCHEMAS_TO_SKIP]
 
@@ -147,7 +147,7 @@ def get_warehouse_tables():
 
 
 def get_catalog_tables(catalog_dir):
-    """Lấy danh sách bảng đã có từ thư mục catalog (dùng khi --offline)."""
+    """Get existing tables list from catalog directory (used with --offline)."""
     tables = set()
     if not os.path.isdir(catalog_dir):
         return tables
@@ -160,7 +160,7 @@ def get_catalog_tables(catalog_dir):
 def resolve_status(full_name, prod_tables, dev_tables):
     if full_name in prod_tables:
         return STATUS_EXISTING
-    # Bảng production chưa có nhưng đã có bản <name>_dev đang test
+    # Production table not yet available but _dev version exists and is being tested
     if f"{full_name}{DEV_SUFFIX}" in dev_tables:
         return STATUS_DEV_ONLY
     return STATUS_NEW
@@ -173,16 +173,16 @@ def build_lineage_md(problem, sorted_names, upstream_map, downstream_map,
     node_id = {name: f"T{i}" for i, name in enumerate(sorted_names)}
 
     lines = [f"# Lineage — {problem}", ""]
-    lines.append("Biểu đồ phụ thuộc (lineage) giữa các bảng trong thiết kế bài toán này, "
-                 "được sinh tự động từ các file design trong thư mục này.")
-    lines.append("Mũi tên `-->` nghĩa là \"được sử dụng để tạo ra\".")
+    lines.append("Dependency diagram (lineage) between tables in this problem design, "
+                 "auto-generated from design files in this directory.")
+    lines.append("Arrow `-->` means \"is used to create\".")
     lines.append("")
 
-    lines.append("## Chú thích trạng thái")
+    lines.append("## Status Legend")
     lines.append("")
-    lines.append(f"- **✅ CÓ**: bảng đã tồn tại trong warehouse (nguồn: {source})")
-    lines.append("- **❌ CẦN LÀM MỚI**: bảng chưa tồn tại, cần build mới theo design")
-    lines.append("- **🔄 ĐANG DEV**: chưa có bảng production nhưng đã có bảng `_dev` đang test")
+    lines.append(f"- **✅ EXISTS**: table already exists in warehouse (source: {source})")
+    lines.append("- **❌ NEEDS BUILDING**: table does not exist yet, needs to be built per design")
+    lines.append("- **🔄 IN DEV**: no production table yet, but `_dev` version is being tested")
     lines.append("")
 
     lines.append("## Mermaid Graph")
@@ -203,9 +203,9 @@ def build_lineage_md(problem, sorted_names, upstream_map, downstream_map,
     lines.append("```")
     lines.append("")
 
-    lines.append("## Bảng chi tiết")
+    lines.append("## Detail Table")
     lines.append("")
-    lines.append("| Bảng | Trạng thái | Upstream | Downstream |")
+    lines.append("| Table | Status | Upstream | Downstream |")
     lines.append("|---|---|---|---|")
     for name in sorted_names:
         ups = upstream_map[name]
@@ -221,19 +221,19 @@ def build_lineage_md(problem, sorted_names, upstream_map, downstream_map,
     new = [n for n in sorted_names if status_map[n] == STATUS_NEW]
 
     if existing:
-        lines.append("## Bảng đã có")
+        lines.append("## Existing Tables")
         for n in existing:
             lines.append(f"- ✅ `{n}`")
         lines.append("")
 
     if dev:
-        lines.append("## Bảng đang có bản _dev (chưa deploy production)")
+        lines.append("## Tables with _dev Version (not yet deployed to production)")
         for n in dev:
             lines.append(f"- 🔄 `{n}`")
         lines.append("")
 
     if new:
-        lines.append("## Bảng cần làm mới")
+        lines.append("## Tables That Need Building")
         for n in new:
             lines.append(f"- ❌ `{n}`")
         lines.append("")
@@ -242,19 +242,19 @@ def build_lineage_md(problem, sorted_names, upstream_map, downstream_map,
     leaf_tables = [n for n in sorted_names if not downstream_map[n]]
 
     if root_tables:
-        lines.append("## Root tables (không có upstream)")
+        lines.append("## Root tables (no upstream)")
         for t in root_tables:
             lines.append(f"- `{t}`")
         lines.append("")
 
     if leaf_tables:
-        lines.append("## Leaf tables (không có downstream)")
+        lines.append("## Leaf tables (no downstream)")
         for t in leaf_tables:
             lines.append(f"- `{t}`")
         lines.append("")
 
     if notes:
-        lines.append("## Ghi chú thiết kế cần kiểm tra")
+        lines.append("## Design Notes Requiring Review")
         lines.extend(notes)
         lines.append("")
 
@@ -264,12 +264,12 @@ def build_lineage_md(problem, sorted_names, upstream_map, downstream_map,
 # ------------------------------------------------------------------------ main
 
 def main():
-    parser = argparse.ArgumentParser(description="Xây dựng lineage.md từ các file design")
-    parser.add_argument("problem", nargs="?", help="Tên bài toán (thư mục con của docs/), ví dụ daily_dex_token_volume")
-    parser.add_argument("--design-dir", help="Đường dẫn trực tiếp tới thư mục design (thay thế problem)")
-    parser.add_argument("--catalog-dir", default="catalog", help="Thư mục catalog dùng khi --offline (default: catalog)")
+    parser = argparse.ArgumentParser(description="Build lineage.md from design files")
+    parser.add_argument("problem", nargs="?", help="Problem name (subdirectory of docs/), e.g. daily_dex_token_volume")
+    parser.add_argument("--design-dir", help="Direct path to design directory (overrides problem)")
+    parser.add_argument("--catalog-dir", default="catalog", help="Catalog directory used with --offline (default: catalog)")
     parser.add_argument("--offline", action="store_true",
-                        help="Không query warehouse, dùng thư mục catalog để xác định bảng đã có")
+                        help="Don't query warehouse, use catalog directory to determine existing tables")
     args = parser.parse_args()
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -278,20 +278,20 @@ def main():
         design_dir = os.path.join(project_root, args.design_dir)
     else:
         if not args.problem:
-            parser.error("Cần cung cấp tên bài toán (positional) hoặc --design-dir")
+            parser.error("Must provide problem name (positional) or --design-dir")
         design_dir = os.path.join(project_root, 'docs', args.problem, 'design')
 
     if not os.path.isdir(design_dir):
-        print(f"[ERROR] Không tìm thấy thư mục design: {design_dir}")
+        print(f"[ERROR] Design directory not found: {design_dir}")
         sys.exit(1)
 
     catalog_dir = os.path.join(project_root, args.catalog_dir)
 
-    # Bước 1: đọc các file design
-    print(f"=== Đọc file design từ: {design_dir} ===")
+    # Step 1: read design files
+    print(f"=== Reading design files from: {design_dir} ===")
     files = sorted(f for f in os.listdir(design_dir) if f.endswith('.md') and f != 'lineage.md')
     if not files:
-        print("[ERROR] Không có file design nào trong thư mục design")
+        print("[ERROR] No design files in the design directory")
         sys.exit(1)
 
     designs = []
@@ -303,10 +303,10 @@ def main():
         upstream_map[d['full_name']] = d['upstreams']
         declared_downstream_map[d['full_name']] = d['declared_downstreams']
         print(f"  - {d['full_name']}: {len(d['upstreams'])} upstream, "
-              f"{len(d['declared_downstreams'])} downstream khai báo")
+              f"{len(d['declared_downstreams'])} declared downstream")
     print()
 
-    # Bước 2: bổ sung các bảng tham chiếu (chỉ xuất hiện ở upstream, không có file design)
+    # Step 2: add referenced tables (only appear in upstream, no design file)
     referenced = set()
     for up_list in upstream_map.values():
         referenced.update(up_list)
@@ -314,18 +314,18 @@ def main():
     for name in all_names:
         if name not in upstream_map:
             upstream_map[name] = []
-    print(f"Tổng số bảng trong graph: {len(all_names)} ({len(designs)} thiết kế, "
-          f"{len(all_names) - len(designs)} tham chiếu ngoài)\n")
+    print(f"Total tables in graph: {len(all_names)} ({len(designs)} designs, "
+          f"{len(all_names) - len(designs)} external references)\n")
 
-    # Bước 3: downstream = đảo ngược upstream (giống build_catalog.py)
+    # Step 3: downstream = reverse of upstream (same as build_catalog.py)
     downstream_map = {name: [] for name in all_names}
     for name, ups in upstream_map.items():
         for up in ups:
             if up in downstream_map:
                 downstream_map[up].append(name)
 
-    # Bước 4: xác định trạng thái bảng (đã có / cần làm mới)
-    print("=== Xác định trạng thái bảng ===")
+    # Step 4: determine table status (exists / needs building)
+    print("=== Determining table status ===")
     if args.offline:
         prod_tables = get_catalog_tables(catalog_dir)
         dev_tables = set()
@@ -335,18 +335,18 @@ def main():
             prod_tables, dev_tables = get_warehouse_tables()
             source = "warehouse (Spark)"
         except Exception as e:
-            print(f"  [WARN] Không query được warehouse ({e}) — dùng thư mục catalog làm nguồn.")
+            print(f"  [WARN] Cannot query warehouse ({e}) — using catalog directory as source.")
             prod_tables = get_catalog_tables(catalog_dir)
             dev_tables = set()
             source = f"catalog ({catalog_dir})"
-    print(f"  Nguồn bảng đã có: {source}")
+    print(f"  Table source: {source}")
 
     status_map = {name: resolve_status(name, prod_tables, dev_tables) for name in all_names}
     for name in sorted(all_names):
         print(f"  - {STATUS_LABEL[status_map[name]]} {name}")
     print()
 
-    # Bước 5: ghi chú — downstream khai báo nhưng không khớp graph suy từ upstream
+    # Step 5: notes — declared downstream doesn't match upstream-inferred graph
     notes = []
     for name in sorted(declared_downstream_map):
         declared = declared_downstream_map[name]
@@ -354,11 +354,11 @@ def main():
         for ds in declared:
             if ds not in computed:
                 notes.append(
-                    f"- ⚠️ `{name}` khai báo downstream `{ds}`, nhưng theo upstream trong file design "
-                    f"của `{ds}` thì bảng này không đọc từ `{name}` — graph không có cạnh phụ thuộc giữa 2 bảng."
+                    f"- Warning: `{name}` declares downstream `{ds}`, but according to upstream in the design file "
+                    f"of `{ds}`, this table does not read from `{name}` — no dependency edge between the two tables."
                 )
 
-    # Bước 6: sinh lineage.md
+    # Step 6: generate lineage.md
     sorted_names = sorted(all_names)
     content = build_lineage_md(
         args.problem or os.path.basename(os.path.dirname(design_dir)),
@@ -374,11 +374,11 @@ def main():
     lineage_path = os.path.join(design_dir, 'lineage.md')
     with open(lineage_path, 'w', encoding='utf-8') as f:
         f.write(content)
-    print(f"=== Hoàn tất! ===")
-    print(f"Đã tạo: {lineage_path}")
-    print(f"Số bảng đã có: {sum(1 for s in status_map.values() if s == STATUS_EXISTING)} | "
-          f"đang dev: {sum(1 for s in status_map.values() if s == STATUS_DEV_ONLY)} | "
-          f"cần làm mới: {sum(1 for s in status_map.values() if s == STATUS_NEW)}")
+    print(f"=== Done! ===")
+    print(f"Generated: {lineage_path}")
+    print(f"Existing: {sum(1 for s in status_map.values() if s == STATUS_EXISTING)} | "
+          f"In dev: {sum(1 for s in status_map.values() if s == STATUS_DEV_ONLY)} | "
+          f"Needs building: {sum(1 for s in status_map.values() if s == STATUS_NEW)}")
 
 
 if __name__ == "__main__":

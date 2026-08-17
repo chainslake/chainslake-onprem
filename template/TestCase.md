@@ -1,11 +1,11 @@
 # Test Case — ethereum_token.erc20_transfer
 
-## Thông tin chung
+## General Information
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Bảng kiểm tra | `ethereum_token.erc20_transfer` |
-| Ngày tạo | 2026-07-26 |
+| Table under test | `ethereum_token.erc20_transfer` |
+| Created date | 2026-07-26 |
 | Version | 1 |
 | frequentType | `block` |
 | Job script | `chainslake/jobs/ethereum/token/erc20_transfer.sh` |
@@ -13,31 +13,31 @@
 
 ## Upstream
 
-| Bảng | Loại join | Ghi chú |
+| Table | Join Type | Notes |
 |---|---|---|
-| `ethereum_decoded.erc20_evt_transfer` | Main source | Bảng chính, mỗi bản ghi = 1 event Transfer ERC-20 |
-| `ethereum.transactions` | INNER JOIN | Phải có transaction tương ứng; nếu thiếu → bản ghi bị loại |
-| `ethereum_contract.erc20_tokens` | LEFT JOIN | Có thể NULL nếu contract chưa có metadata trong registry |
+| `ethereum_decoded.erc20_evt_transfer` | Main source | Primary table, each row = 1 ERC-20 Transfer event |
+| `ethereum.transactions` | INNER JOIN | Must have corresponding transaction; if missing → record is excluded |
+| `ethereum_contract.erc20_tokens` | LEFT JOIN | May be NULL if contract has no metadata in registry |
 
 ---
 
-## Nhóm 1: Kiểm tra Schema và Cấu trúc
+## Group 1: Schema & Structure Tests
 
-### TC-1.1: Kiểm tra tồn tại bảng
+### TC-1.1: Table Existence Check
 
-**Mục đích**: Xác nhận bảng đã được tạo thành công trong data warehouse.
+**Purpose**: Confirm the table was created successfully in the data warehouse.
 
 ```sql
 DESCRIBE ethereum_token.erc20_transfer
 ```
 
-**Kỳ vọng**: Trả về danh sách 15 cột với đúng kiểu dữ liệu.
+**Expected**: Returns 15 columns with correct data types.
 
-### TC-1.2: Kiểm tra kiểu dữ liệu từng cột
+### TC-1.2: Column Data Type Check
 
-**Mục đích**: Đảm bảo schema khớp với thiết kế catalog.
+**Purpose**: Ensure schema matches catalog design.
 
-| Cột | Kiểu kỳ vọng | Kiểu thực tế |
+| Column | Expected Type | Actual Type |
 |---|---|---|
 | `block_date` | `date` | |
 | `block_number` | `bigint` | |
@@ -55,43 +55,43 @@ DESCRIBE ethereum_token.erc20_transfer
 | `tx_to` | `string` | |
 | `tx_method_id` | `string` | |
 
-### TC-1.3: Kiểm tra Partition
+### TC-1.3: Partition Check
 
-**Mục đích**: Xác nhận bảng được partition theo `block_date`.
+**Purpose**: Confirm table is partitioned by `block_date`.
 
 ```sql
 SHOW PARTITIONS ethereum_token.erc20_transfer
 ```
 
-**Kỳ vọng**: Kết quả trả về dạng `block_date=YYYY-MM-DD`.
+**Expected**: Results in format `block_date=YYYY-MM-DD`.
 
-### TC-1.4: Kiểm tra Index columns
+### TC-1.4: Index Columns Check
 
-**Mục đích**: Xác nhận 3 cột index đầu tiên đúng thứ tự: `block_date`, `block_number`, `block_time`.
+**Purpose**: Confirm the first 3 index columns are in correct order: `block_date`, `block_number`, `block_time`.
 
 ```sql
 DESCRIBE EXTENDED ethereum_token.erc20_transfer
 ```
 
-**Kỳ vọng**: 3 cột đầu tiên theo đúng thứ tự index.
+**Expected**: First 3 columns match the index order.
 
 ---
 
-## Nhóm 2: Kiểm tra Dữ liệu Cơ bản
+## Group 2: Basic Data Tests
 
-### TC-2.1: Kiểm tra số lượng bản ghi tổng
+### TC-2.1: Total Row Count
 
-**Mục đích**: Đảm bảo bảng có dữ liệu.
+**Purpose**: Ensure the table contains data.
 
 ```sql
 SELECT count(*) as total_rows FROM ethereum_token.erc20_transfer
 ```
 
-**Kỳ vọng**: `total_rows > 0`.
+**Expected**: `total_rows > 0`.
 
-### TC-2.2: Kiểm tra khoảng block_number
+### TC-2.2: Block Number Range Check
 
-**Mục đích**: Đảm bảo dữ liệu nằm trong khoảng block hợp lý.
+**Purpose**: Ensure data falls within a reasonable block range.
 
 ```sql
 SELECT
@@ -101,14 +101,14 @@ SELECT
 FROM ethereum_token.erc20_transfer
 ```
 
-**Kỳ vọng**:
+**Expected**:
 - `min_block` >= 0
 - `max_block` > `min_block`
 - `total_rows` > 0
 
-### TC-2.3: Kiểm tra phân bổ dữ liệu theo block_date
+### TC-2.3: Data Distribution by block_date
 
-**Mục đích**: Đảm bảo dữ liệu phân bổ đều theo ngày, không bị thiếu ngày.
+**Purpose**: Ensure data is evenly distributed by day with no missing dates.
 
 ```sql
 SELECT
@@ -121,14 +121,14 @@ GROUP BY block_date
 ORDER BY block_date
 ```
 
-**Kỳ vọng**:
-- Mỗi ngày có dữ liệu > 0 bản ghi
-- `min_block` và `max_block` tăng dần theo `block_date`
-- Không có ngày bị thiếu (gap)
+**Expected**:
+- Each day has data with > 0 rows
+- `min_block` and `max_block` increase with `block_date`
+- No missing dates (gaps)
 
-### TC-2.4: Kiểm tra không có bản ghi trùng lặp
+### TC-2.4: Duplicate Record Check
 
-**Mục đích**: Đảm bảo mỗi transfer event chỉ xuất hiện 1 lần.
+**Purpose**: Ensure each transfer event appears only once.
 
 ```sql
 SELECT
@@ -138,15 +138,15 @@ GROUP BY tx_hash, evt_index
 HAVING cnt > 1
 ```
 
-**Kỳ vọng**: Kết quả trả về 0 dòng (không có duplicate).
+**Expected**: Returns 0 rows (no duplicates).
 
 ---
 
-## Nhóm 3: Kiểm tra Logic SQL Transform
+## Group 3: SQL Transform Logic Tests
 
-### TC-3.1: Kiểm tra INNER JOIN với transactions
+### TC-3.1: INNER JOIN with transactions Check
 
-**Mục đích**: Xác nhận mỗi bản ghi erc20_transfer đều có transaction tương ứng. Nếu có transfer event mà không match transaction → bị loại (đúng logic INNER JOIN).
+**Purpose**: Confirm each erc20_transfer record has a corresponding transaction. Transfer events without matching transactions are excluded (correct INNER JOIN behavior).
 
 ```sql
 SELECT count(*) as orphan_count
@@ -157,11 +157,11 @@ WHERE t.tx_hash IS NULL
 AND e.block_number >= 25516917 AND e.block_number <= 25517819
 ```
 
-**Kỳ vọng**: `orphan_count` = 0 hoặc rất nhỏ (do inner join loại bỏ).
+**Expected**: `orphan_count` = 0 or very small (excluded by inner join).
 
-### TC-3.2: Kiểm tra LEFT JOIN với erc20_tokens —_token có metadata
+### TC-3.2: LEFT JOIN with erc20_tokens — tokens WITH metadata
 
-**Mục đích**: Xác nhận token đã có trong registry có symbol và decimals.
+**Purpose**: Confirm tokens in the registry have symbol and decimals.
 
 ```sql
 SELECT
@@ -176,11 +176,11 @@ ORDER BY cnt DESC
 LIMIT 10
 ```
 
-**Kỳ vọng**: Kết quả trả về danh sách token phổ biến (USDC, USDT, WETH, DAI, ...).
+**Expected**: Returns list of common tokens (USDC, USDT, WETH, DAI, ...).
 
-### TC-3.3: Kiểm tra LEFT JOIN với erc20_tokens — token chưa có metadata
+### TC-3.3: LEFT JOIN with erc20_tokens — tokens WITHOUT metadata
 
-**Mục đích**: Xác nhận transfer event từ contract chưa có trong erc20_tokens vẫn được giữ lại, nhưng symbol và decimals là NULL.
+**Purpose**: Confirm transfer events from contracts not in erc20_tokens are still retained, but symbol and decimals are NULL.
 
 ```sql
 SELECT count(*) as null_metadata_count
@@ -188,11 +188,11 @@ FROM ethereum_token.erc20_transfer
 WHERE symbol IS NULL OR decimals IS NULL
 ```
 
-**Kỳ vọng**: Nếu > 0 thì là hợp lý (contract chưa register trong registry).
+**Expected**: If > 0, this is normal (contract not registered in registry).
 
-### TC-3.4: Kiểm tra phép tính chuyển đổi value
+### TC-3.4: Value Conversion Calculation Check
 
-**Mục đích**: Xác nhận `value = raw_value * 10^(-decimals)` được tính đúng.
+**Purpose**: Confirm `value = raw_value * 10^(-decimals)` is calculated correctly.
 
 ```sql
 SELECT
@@ -209,11 +209,11 @@ WHERE t.symbol IS NOT NULL
 LIMIT 10
 ```
 
-**Kỳ vọng**: `converted_value` = `expected_value` (sai số < 0.000001 do lỗi làm tròn double).
+**Expected**: `converted_value` = `expected_value` (deviation < 0.000001 due to double rounding).
 
-### TC-3.5: Kiểm tra trường hợp decimals = 0 (token không có decimals)
+### TC-3.5: decimals = 0 Case (token without decimals)
 
-**Mục đích**: Xác nhận phép tính vẫn đúng khi decimals = 0 (value gốc giữ nguyên).
+**Purpose**: Confirm calculation is correct when decimals = 0 (raw value preserved).
 
 ```sql
 SELECT
@@ -223,11 +223,11 @@ FROM ethereum_token.erc20_transfer
 WHERE decimals = 0
 ```
 
-**Kỳ vọng**: `value` bằng với raw value từ erc20_evt_transfer (vì `10^0 = 1`).
+**Expected**: `value` equals raw value from erc20_evt_transfer (since `10^0 = 1`).
 
-### TC-3.6: Kiểm tra trường hợp decimals lớn (18 — token phổ biến nhất)
+### TC-3.6: High decimals Case (18 — most common)
 
-**Mục đích**: Xác nhận phép tính chuyển đổi đúng với token có 18 decimals (ví dụ: WETH, DAI).
+**Purpose**: Confirm conversion calculation works correctly for tokens with 18 decimals (e.g., WETH, DAI).
 
 ```sql
 SELECT
@@ -238,13 +238,13 @@ WHERE decimals = 18 AND symbol IN ('WETH', 'DAI', 'USDC')
 LIMIT 10
 ```
 
-**Kỳ vọng**: `value` là số thực hợp lý (ví dụ: WETH transfer 1 ETH → value ≈ 1.0).
+**Expected**: `value` is a reasonable real number (e.g., WETH transfer of 1 ETH → value ≈ 1.0).
 
 ---
 
-## Nhóm 4: Kiểm tra Tính toàn vẹn Dữ liệu
+## Group 4: Data Integrity Tests
 
-### TC-4.1: Kiểm tra không có block_number NULL
+### TC-4.1: No NULL block_number
 
 ```sql
 SELECT count(*) as null_count
@@ -252,9 +252,9 @@ FROM ethereum_token.erc20_transfer
 WHERE block_number IS NULL
 ```
 
-**Kỳ vọng**: `null_count` = 0.
+**Expected**: `null_count` = 0.
 
-### TC-4.2: Kiểm tra không có tx_hash NULL
+### TC-4.2: No NULL tx_hash
 
 ```sql
 SELECT count(*) as null_count
@@ -262,9 +262,9 @@ FROM ethereum_token.erc20_transfer
 WHERE tx_hash IS NULL
 ```
 
-**Kỳ vọng**: `null_count` = 0.
+**Expected**: `null_count` = 0.
 
-### TC-4.3: Kiểm tra không có from/to NULL
+### TC-4.3: No NULL from/to
 
 ```sql
 SELECT count(*) as null_count
@@ -272,9 +272,9 @@ FROM ethereum_token.erc20_transfer
 WHERE `from` IS NULL OR `to` IS NULL
 ```
 
-**Kỳ vọng**: `null_count` = 0.
+**Expected**: `null_count` = 0.
 
-### TC-4.4: Kiểm tra không có value NULL hoặc NaN
+### TC-4.4: No NULL or NaN value
 
 ```sql
 SELECT count(*) as null_count
@@ -282,11 +282,11 @@ FROM ethereum_token.erc20_transfer
 WHERE value IS NULL OR isNaN(value)
 ```
 
-**Kỳ vọng**: `null_count` = 0.
+**Expected**: `null_count` = 0.
 
-### TC-4.5: Kiểm tra block_time >= block_date
+### TC-4.5: block_time >= block_date
 
-**Mục đích**: Đảm bảo block_time nằm trong block_date tương ứng.
+**Purpose**: Ensure block_time falls within its corresponding block_date.
 
 ```sql
 SELECT count(*) as invalid_count
@@ -294,9 +294,9 @@ FROM ethereum_token.erc20_transfer
 WHERE CAST(block_time AS DATE) != block_date
 ```
 
-**Kỳ vọng**: `invalid_count` = 0.
+**Expected**: `invalid_count` = 0.
 
-### TC-4.6: Kiểm tra contract_address có định dạng hex hợp lệ
+### TC-4.6: contract_address Valid Hex Format
 
 ```sql
 SELECT count(*) as invalid_count
@@ -305,9 +305,9 @@ WHERE contract_address IS NOT NULL
 AND NOT contract_address RLIKE '^0x[0-9a-fA-F]{40}$'
 ```
 
-**Kỳ vọng**: `invalid_count` = 0.
+**Expected**: `invalid_count` = 0.
 
-### TC-4.7: Kiểm tra tx_from và tx_to có định dạng hex hợp lệ
+### TC-4.7: tx_from and tx_to Valid Hex Format
 
 ```sql
 SELECT count(*) as invalid_count
@@ -316,15 +316,15 @@ WHERE (tx_from IS NOT NULL AND NOT tx_from RLIKE '^0x[0-9a-fA-F]{40}$')
 OR (tx_to IS NOT NULL AND NOT tx_to RLIKE '^0x[0-9a-fA-F]{40}$')
 ```
 
-**Kỳ vọng**: `invalid_count` = 0.
+**Expected**: `invalid_count` = 0.
 
 ---
 
-## Nhóm 5: Kiểm tra Business Logic
+## Group 5: Business Logic Tests
 
-### TC-5.1: Kiểm tra USDC transfer (decimals=6)
+### TC-5.1: USDC Transfer Check (decimals=6)
 
-**Mục đích**: Xác nhận USDC transfer có value hợp lý. USDC có 6 decimals, nên 1 USDC = 1.0.
+**Purpose**: Confirm USDC transfers have reasonable values. USDC has 6 decimals, so 1 USDC = 1.0.
 
 ```sql
 SELECT
@@ -337,9 +337,9 @@ AND value BETWEEN 100 AND 1000
 LIMIT 5
 ```
 
-**Kỳ vọng**: Kết quả trả về các transfer USDC với value hợp lý (phản ánh đúng giá trị USD).
+**Expected**: Returns USDC transfers with reasonable values (reflecting correct USD value).
 
-### TC-5.2: Kiểm tra USDT transfer (decimals=6)
+### TC-5.2: USDT Transfer Check (decimals=6)
 
 ```sql
 SELECT
@@ -352,9 +352,9 @@ AND value > 0
 LIMIT 5
 ```
 
-**Kỳ vọng**: USDT transfer có value > 0, symbol = 'USDT'.
+**Expected**: USDT transfers with value > 0, symbol = 'USDT'.
 
-### TC-5.3: Kiểm tra WETH transfer (decimals=18)
+### TC-5.3: WETH Transfer Check (decimals=18)
 
 ```sql
 SELECT
@@ -367,9 +367,9 @@ AND value BETWEEN 0.01 AND 100
 LIMIT 5
 ```
 
-**Kỳ vọng**: WETH transfer có value > 0, symbol = 'WETH'.
+**Expected**: WETH transfers with value > 0, symbol = 'WETH'.
 
-### TC-5.4: Kiểm tra DAI transfer (decimals=18)
+### TC-5.4: DAI Transfer Check (decimals=18)
 
 ```sql
 SELECT
@@ -382,11 +382,11 @@ AND value > 0
 LIMIT 5
 ```
 
-**Kỳ vọng**: DAI transfer có value > 0, symbol = 'DAI'.
+**Expected**: DAI transfers with value > 0, symbol = 'DAI'.
 
-### TC-5.5: Kiểm tra from ≠ to (không transfer cho chính mình)
+### TC-5.5: from != to (No Self-Transfer Check)
 
-**Mục đích**: Phần lớn transfers có from ≠ to. Nếu from = to vẫn hợp lý nhưng ít gặp.
+**Purpose**: Most transfers have from != to. Self-transfers (from = to) are valid but rare.
 
 ```sql
 SELECT count(*) as self_transfer_count
@@ -394,11 +394,11 @@ FROM ethereum_token.erc20_transfer
 WHERE `from` = `to`
 ```
 
-**Kỳ vọng**: `self_transfer_count` = 0 hoặc rất nhỏ so với tổng.
+**Expected**: `self_transfer_count` = 0 or very small compared to total.
 
-### TC-5.6: Kiểm tra tx_method_id có hợp lệ
+### TC-5.6: tx_method_id Validity Check
 
-**Mục đích**: ERC-20 transfer thường có method_id = `0xa9059cbb` (transfer) hoặc `0x23b872dd` (transferFrom).
+**Purpose**: ERC-20 transfers typically have method_id = `0xa9059cbb` (transfer) or `0x23b872dd` (transferFrom).
 
 ```sql
 SELECT
@@ -410,11 +410,11 @@ ORDER BY cnt DESC
 LIMIT 10
 ```
 
-**Kỳ vọng**: Method_id phổ biến nhất là `0xa9059cbb` và `0x23b872dd`.
+**Expected**: Most common method_ids are `0xa9059cbb` and `0x23b872dd`.
 
-### TC-5.7: Kiểm tra tx_to = contract_address
+### TC-5.7: tx_to = contract_address Check
 
-**Mục đích**: Trong trường hợp, `tx_to` trong transaction = `contract_address` của token (vì user gọi function trên contract token).
+**Purpose**: In most cases, `tx_to` in the transaction = `contract_address` of the token (user calling function on token contract).
 
 ```sql
 SELECT count(*) as mismatch_count
@@ -422,15 +422,15 @@ FROM ethereum_token.erc20_transfer
 WHERE tx_to != contract_address
 ```
 
-**Kỳ vọng**: `mismatch_count` = 0 hoặc rất nhỏ (trường hợp multisig, proxy, batch transfer có thể lệch).
+**Expected**: `mismatch_count` = 0 or very small (multisig, proxy, batch transfers may differ).
 
 ---
 
-## Nhóm 6: Kiểm tra Range và Partition
+## Group 6: Range & Partition Tests
 
-### TC-6.1: Kiểm tra block_number nằm trong khoảng từ/to của SQL filter
+### TC-6.1: Block Number Within SQL Filter Range
 
-**Mục đích**: Xác nhận mỗi bản ghi đều nằm trong khoảng block mà job đã xử lý.
+**Purpose**: Confirm each record falls within the block range processed by the job.
 
 ```sql
 SELECT
@@ -440,11 +440,11 @@ SELECT
 FROM ethereum_token.erc20_transfer
 ```
 
-**Kỳ vọng**: Kết quả khớp với catalog (fromBlock=25516917, toBlock=25517819).
+**Expected**: Results match catalog (fromBlock=25516917, toBlock=25517819).
 
-### TC-6.2: Kiểm tra phân bổ bản ghi theo partition
+### TC-6.2: Record Distribution by Partition
 
-**Mục đích**: Đảm bảo dữ liệu phân bổ đều, không partition nào quá lớn hoặc quá nhỏ.
+**Purpose**: Ensure data is evenly distributed, no partition too large or too small.
 
 ```sql
 SELECT
@@ -456,11 +456,11 @@ GROUP BY block_date
 ORDER BY block_date
 ```
 
-**Kỳ vọng**:
-- Mỗi partition có dữ liệu
-- Số block_count / ngày ≈ 900–1100 block/ngày (≈ 12s/block × 86400s/ngày)
+**Expected**:
+- Each partition has data
+- block_count per day ≈ 900–1100 blocks/day (≈ 12s/block × 86400s/day)
 
-### TC-6.3: Kiểm tra block_number tăng dần trong cùng partition
+### TC-6.3: Block Number Monotonicity Within Partition
 
 ```sql
 SELECT count(*) as disorder_count
@@ -472,15 +472,15 @@ FROM (
 WHERE prev_block IS NOT NULL AND block_number <= prev_block
 ```
 
-**Kỳ vọng**: `disorder_count` = 0.
+**Expected**: `disorder_count` = 0.
 
 ---
 
-## Nhóm 7: Kiểm tra Edge Cases
+## Group 7: Edge Case Tests
 
-### TC-7.1: Kiểm tra token có decimals rất lớn (> 30)
+### TC-7.1: Token with Very High decimals (> 30)
 
-**Mục đích**: Một số token non-standard có decimals rất lớn. Phép tính `pow(10, -decimals)` có thể tạo ra số rất nhỏ hoặc 0.
+**Purpose**: Some non-standard tokens have extremely high decimals. The `pow(10, -decimals)` calculation may produce very small numbers or zero.
 
 ```sql
 SELECT
@@ -491,11 +491,11 @@ WHERE decimals > 30
 GROUP BY contract_address, symbol, decimals
 ```
 
-**Kỳ vọng**: Nếu có → xác nhận value đã bị làm tròn về 0 hoặc rất nhỏ (hợp lý về mặt toán).
+**Expected**: If any exist → confirm value has been rounded to 0 or very small (mathematically correct).
 
-### TC-7.2: Kiểm tra value = 0
+### TC-7.2: value = 0 Check
 
-**Mục đích**: Có thể có transfer event với value = 0 (burn token, hoặc test transaction).
+**Purpose**: There may be transfer events with value = 0 (token burn or test transaction).
 
 ```sql
 SELECT count(*) as zero_value_count
@@ -503,9 +503,9 @@ FROM ethereum_token.erc20_transfer
 WHERE value = 0
 ```
 
-**Kỳ vọng**: `zero_value_count` = 0 hoặc rất nhỏ.
+**Expected**: `zero_value_count` = 0 or very small.
 
-### TC-7.3: Kiểm tra value < 0 (bất thường)
+### TC-7.3: value < 0 Check (Anomalous)
 
 ```sql
 SELECT count(*) as negative_count
@@ -513,11 +513,11 @@ FROM ethereum_token.erc20_transfer
 WHERE value < 0
 ```
 
-**Kỳ vọng**: `negative_count` = 0 (ERC-20 transfer value luôn >= 0).
+**Expected**: `negative_count` = 0 (ERC-20 transfer values are always >= 0).
 
-### TC-7.4: Kiểm tra同一 block_number có nhiều transfers
+### TC-7.4: Multiple Transfers per block_number
 
-**Mục đích**: Một block có thể chứa nhiều transfer events.
+**Purpose**: A single block can contain multiple transfer events.
 
 ```sql
 SELECT
@@ -529,11 +529,11 @@ ORDER BY transfer_count DESC
 LIMIT 10
 ```
 
-**Kỳ vọng**: Kết quả trả về các block có nhiều transfers (normal behavior).
+**Expected**: Returns blocks with many transfers (normal behavior).
 
-### TC-7.5: Kiểm tra同一 tx_hash có nhiều transfers
+### TC-7.5: Multiple Transfers per tx_hash
 
-**Mục đích**: Một transaction có thể chứa nhiều transfer events (batch transfer, multicall).
+**Purpose**: A single transaction can contain multiple transfer events (batch transfer, multicall).
 
 ```sql
 SELECT
@@ -546,15 +546,15 @@ ORDER BY transfer_count DESC
 LIMIT 10
 ```
 
-**Kỳ vọng**: Kết quả trả về các transaction có nhiều transfers (hợp lý, đặc biệt trên DEX).
+**Expected**: Returns transactions with multiple transfers (valid, especially on DEX).
 
 ---
 
-## Nhóm 8: Kiểm tra Consistency với Upstream
+## Group 8: Upstream Consistency Tests
 
-### TC-8.1: Kiểm tra số lượng bản ghi khớp giữa erc20_transfer và erc20_evt_transfer
+### TC-8.1: Row Count Consistency Between erc20_transfer and erc20_evt_transfer
 
-**Mục đích**: Xác nhận số lượng transfer events trong erc20_transfer = số lượng trong erc20_evt_transfer (trong cùng khoảng block).
+**Purpose**: Confirm transfer event count in erc20_transfer = count in erc20_evt_transfer (within same block range).
 
 ```sql
 SELECT
@@ -563,9 +563,9 @@ SELECT
     (SELECT count(*) FROM ethereum_token.erc20_transfer) as token_count
 ```
 
-**Kỳ vọng**: `upstream_count` = `token_count` (hoặc rất gần nhau, do inner join có thể loại bỏ một vài bản ghi không match transaction).
+**Expected**: `upstream_count` = `token_count` (or very close, since inner join may exclude a few records without matching transactions).
 
-### TC-8.2: Kiểm tra symbol và decimals khớp với erc20_tokens
+### TC-8.2: Symbol and Decimals Consistency with erc20_tokens
 
 ```sql
 SELECT
@@ -580,9 +580,9 @@ ON t.contract_address = c.contract_address
 WHERE t.symbol != c.symbol OR t.decimals != c.decimals
 ```
 
-**Kỳ vọng**: Kết quả trả về 0 dòng (tất cả symbol/decimals khớp).
+**Expected**: Returns 0 rows (all symbol/decimals match).
 
-### TC-8.3: Kiểm tra tx_from, tx_to khớp với transactions
+### TC-8.3: tx_from, tx_to Consistency with transactions
 
 ```sql
 SELECT
@@ -597,27 +597,27 @@ ON t.tx_hash = tx.hash
 WHERE t.tx_from != tx.`from` OR t.tx_to != tx.`to`
 ```
 
-**Kỳ vọng**: Kết quả trả về 0 dòng.
+**Expected**: Returns 0 rows.
 
 ---
 
-## Tổng hợp
+## Summary
 
-| Nhóm | Số test case | Ghi chú |
+| Group | Test Cases | Notes |
 |---|---|---|
-| 1. Schema & Cấu trúc | 4 | Kiểm tra bảng, kiểu dữ liệu, partition, index |
-| 2. Dữ liệu Cơ bản | 4 | Kiểm tra tồn tại, khoảng block, phân bổ, duplicate |
-| 3. Logic SQL Transform | 6 | Kiểm tra JOIN, phép tính value, edge cases decimals |
-| 4. Tính toàn vẹn | 7 | Kiểm tra NULL, format hex, block_time vs block_date |
-| 5. Business Logic | 7 | Kiểm tra token cụ thể (USDC/USDT/WETH/DAI), method_id |
-| 6. Range & Partition | 3 | Kiểm tra block range, phân bổ partition, thứ tự block |
-| 7. Edge Cases | 5 | Kiểm tra decimals lớn, value = 0, value < 0, batch transfer |
-| 8. Consistency Upstream | 3 | Kiểm tra khớp dữ liệu với upstream tables |
-| **Tổng cộng** | **39** | |
+| 1. Schema & Structure | 4 | Table, data types, partition, index |
+| 2. Basic Data | 4 | Existence, block range, distribution, duplicates |
+| 3. SQL Transform Logic | 6 | JOINs, value calculation, decimals edge cases |
+| 4. Data Integrity | 7 | NULL checks, hex format, block_time vs block_date |
+| 5. Business Logic | 7 | Specific tokens (USDC/USDT/WETH/DAI), method_id |
+| 6. Range & Partition | 3 | Block range, partition distribution, block order |
+| 7. Edge Cases | 5 | High decimals, value = 0, value < 0, batch transfers |
+| 8. Upstream Consistency | 3 | Data consistency with upstream tables |
+| **Total** | **39** | |
 
-## Cách chạy Test
+## How to Run Tests
 
-1. Kết nối vào Spark SQL (truy cập qua container hoặc JDBC)
-2. Chạy từng test case theo thứ tự nhóm
-3. Ghi kết quả thực tế vào cột "Kết quả thực tế" (thêm cột khi sử dụng)
-4. Nếu test case fail → Phân tích nguyên nhân, ghi chú tại mục "Ghi chú" (thêm cột khi sử dụng)
+1. Connect to Spark SQL (access via container or JDBC)
+2. Run each test case in group order
+3. Fill in the "Actual Result" column (add column when using)
+4. If test case fails → Analyze root cause, add notes in the "Notes" column (add column when using)

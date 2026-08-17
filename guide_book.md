@@ -1,84 +1,84 @@
 # Chainslake Job Mechanics — Guide Book
 
-Tài liệu này mô tả cơ chế hoạt động bên trong của các job trong hệ thống Chainslake, giúp người dùng và Agent hiểu rõ cách dữ liệu được xử lý, theo dõi và đảm bảo tính chính xác — từ đó cấu hình pipeline một cách chính xác.
+This document describes the internal mechanics of jobs in the Chainslake system, helping users and Agents understand how data is processed, tracked, and ensured for accuracy — enabling precise pipeline configuration.
 
 ---
 
-## Mục lục
+## Table of Contents
 
-1. [Nguyên tắc cơ bản: 1 Job = 1 Bảng](#1-nguyên-tắc-cơ-bản-1-job--1-bảng)
-2. [Bảng Properties — Cơ chế theo dõi dữ liệu](#2-bảng-properties--cơ-chế-theo-dõi-dữ-liệu)
-3. [Upstream — Mạng lưới phụ thuộc giữa các bảng](#3-upstream--mạng-lưới-phụ-thuộc-giữa-các-bảng)
-4. [Cơ chế tính toán khoảng dữ liệu](#4-cơ-chế-tính-toán-khoảng-dữ-liệu)
-5. [Hai loại bảng: Block-based và Time-based](#5-hai-loại-bảng-block-based-đi-time-based)
-6. [Cơ chế xử lý lỗi và đảm bảo dữ liệu](#6-cơ-chế-xử-lý-lỗi-và-đảm-bảo-dữ-liệu)
-7. [Tóm tắt flow chạy của một job](#7-tóm-tắt-flow-chạy-của-một-job)
-8. [Ví dụ thực tế](#8-ví-dụ-thực-tế)
-9. [Cơ chế hoạt động của `pre_decode_tables` và `register_evm_call`](#9-cơ-chế-hoạt-động-của-pre_decode_tables-và-register_evm_call)
-
----
-
-## 1. Nguyên tắc cơ bản: 1 Job = 1 Bảng
-
-Mỗi job trong hệ thống Chainslake được thiết kế để đẩy dữ liệu vào **duy nhất một bảng** trong data warehouse. Đây là nguyên tắc nền tảng giúp:
-
-- Theo dõi chính xác tiến trình xử lý của từng bảng
-- Quản lý dependencies giữa các bảng một cách rõ ràng
-- Khôi phục dữ liệu khi gặp lỗi mà không ảnh hưởng đến các bảng khác
-
-Khi cấu hình một job mới, bạn cần xác định rõ **đầu ra** (output table) của job đó là bảng nào. Toàn bộ logic xử lý sẽ xoay quanh việc biến đổi dữ liệu từ các bảng input sang bảng output duy nhất đó.
+1. [Core Principle: 1 Job = 1 Table](#1-core-principle-1-job--1-table)
+2. [Table Properties — Data Tracking Mechanism](#2-table-properties--data-tracking-mechanism)
+3. [Upstream — Inter-table Dependency Network](#3-upstream--inter-table-dependency-network)
+4. [Data Range Calculation Mechanism](#4-data-range-calculation-mechanism)
+5. [Two Table Types: Block-based and Time-based](#5-two-table-types-block-based-and-time-based)
+6. [Error Handling and Data Integrity Mechanisms](#6-error-handling-and-data-integrity-mechanisms)
+7. [Job Execution Flow Summary](#7-job-execution-flow-summary)
+8. [Real-world Examples](#8-real-world-examples)
+9. [`pre_decode_tables` and `register_evm_call` Mechanics](#9-pre_decode_tables-and-register_evm_call-mechanics)
 
 ---
 
-## 2. Bảng Properties — Cơ chế theo dõi dữ liệu
+## 1. Core Principle: 1 Job = 1 Table
 
-### 2.1 Khái niệm
+Every job in the Chainslake system is designed to write data into **exactly one table** in the data warehouse. This foundational principle helps:
 
-Mỗi bảng trong data warehouse không chỉ lưu trữ dữ liệu business mà còn lưu trữ **metadata** dưới dạng **properties**. Các properties này là chìa khóa giúp hệ thống biết được dữ liệu trong bảng đã được xử lý đến đâu.
+- Accurately track processing progress for each table
+- Manage dependencies between tables clearly
+- Recover from errors without affecting other tables
 
-### 2.2 Các thuộc tính theo dõi khoảng dữ liệu
+When configuring a new job, you must clearly identify the **output** (output table) of that job. All processing logic revolves around transforming data from input tables to that single output table.
 
-Tùy thuộc vào loại bảng (xem [Phần 5](#5-hai-loại-bảng-block-based-đi-time-based)), hệ thống sử dụng một trong hai cặp thuộc tính:
+---
 
-| Cặp thuộc tính | Áp dụng cho | Mô tả |
+## 2. Table Properties — Data Tracking Mechanism
+
+### 2.1 Concept
+
+Each table in the data warehouse stores not only business data but also **metadata** in the form of **properties**. These properties are the key mechanism the system uses to know how far data in the table has been processed.
+
+### 2.2 Data Range Tracking Properties
+
+Depending on the table type (see [Section 5](#5-two-table-types-block-based-and-time-based)), the system uses one of two property pairs:
+
+| Property Pair | Applies To | Description |
 |---|---|---|
-| `fromBlock`, `toBlock` | Bảng `frequentType=block` | Khoảng block_number dữ liệu hiện có trong bảng |
-| `fromEpochSecond`, `toEpochSecond` | Bảng `frequentType=minute/hour/day` | Khoảng thời gian (epoch seconds) dữ liệu hiện có trong bảng |
+| `fromBlock`, `toBlock` | `frequentType=block` tables | Block_number range of data currently in the table |
+| `fromEpochSecond`, `toEpochSecond` | `frequentType=minute/hour/day` tables | Time range (epoch seconds) of data currently in the table |
 
-### 2.3 Khi nào properties được cập nhật
+### 2.3 When Properties Are Updated
 
-Properties chỉ được cập nhật **sau khi dữ liệu đã được ghi thành công vào bảng** trong một vòng lặp (partition). Cụ thể:
+Properties are only updated **after data has been successfully written to the table** within one iteration (partition). Specifically:
 
 ```
-Job bắt đầu chạy
+Job starts running
     │
     ▼
-Đọc properties của bảng output (nếu bảng đã tồn tại)
+Read properties of output table (if table exists)
     │
     ▼
-Tính toán khoảng dữ liệu cần xử lý
+Calculate data range to process
     │
     ▼
-Xử lý và ghi dữ liệu (write to table)
+Process and write data (write to table)
     │
-    ├── Thành công → Cập nhật properties (from/toBlock hoặc from/toEpochSecond)
+    ├── Success → Update properties (from/toBlock or from/toEpochSecond)
     │
-    └── Thất bại → Properties KHÔNG thay đổi
+    └── Failure → Properties NOT changed
 ```
 
-**Tại sao phải ghi thành công mới update properties?**
+**Why must properties only be updated after successful write?**
 
-Nếu properties được cập nhật trước khi ghi xong, và job bị crash giữa chừng, thì ở lần chạy sau hệ thống sẽ tin rằng dữ liệu đã được xử lý xong → **dữ liệu bị thiếu** mà không có cơ chế tự sửa. Việc cập nhật sau khi ghi đảm bảo rằng properties luôn phản ánh chính xác dữ liệu thực tế trong bảng.
+If properties were updated before writing completes, and the job crashes midway, the next run would assume data was already processed → **data gaps** with no self-healing mechanism. Updating after write ensures properties always accurately reflect actual data in the table.
 
 ---
 
-## 3. Upstream — Mạng lưới phụ thuộc giữa các bảng
+## 3. Upstream — Inter-table Dependency Network
 
-### 3.1 Khái niệm Upstream
+### 3.1 Upstream Concept
 
-Mỗi bảng (trừ các **bảng origin** — bảng đầu nguồn lấy trực tiếp từ RPC) đều có một danh sách các bảng input mà nó phụ thuộc vào. Danh sách này được gọi là **upstream**.
+Every table (except **origin tables** — the starting tables sourced directly from RPC) has a list of input tables it depends on. This list is called **upstream**.
 
-Upstream được khai báo trong file `.sql` thông qua thuộc tính `list_input_tables`:
+Upstream is declared in the `.sql` file via the `list_input_tables` property:
 
 ```sql
 frequent_type=block
@@ -86,85 +86,85 @@ list_input_tables=${chain_name}_origin.transaction_blocks,${chain_name}_origin.b
 output_table=${chain_name}.blocks
 ```
 
-Trong ví dụ trên, bảng `ethereum.blocks` có upstream là:
+In this example, `ethereum.blocks` has upstream:
 - `ethereum_origin.transaction_blocks`
 - `ethereum_origin.blocks_receipt`
 
-### 3.2 Upstream được lưu ở đâu
+### 3.2 Where Upstream Is Stored
 
-Khi job chạy, danh sách upstream được set vào **properties của bảng output**. Thông tin này giúp:
+When a job runs, the upstream list is set into the **output table's properties**. This information helps:
 
-- Hệ thống (và người dùng) có thể truy vết nguồn gốc dữ liệu (data lineage)
-- Các job downstream biết được dependencies của mình
-- Agent có thể tự động xây dựng graph phụ thuộc
+- The system (and users) trace data lineage
+- Downstream jobs know their dependencies
+- Agents can automatically build dependency graphs
 
-### 3.3 Bảng origin
+### 3.3 Origin Tables
 
-Bảng origin là các bảng **đầu nguồn** trong pipeline, dữ liệu được lấy trực tiếp từ RPC node của blockchain. Các bảng này **không có upstream** vì chúng là điểm bắt đầu của toàn bộ chuỗi xử lý.
+Origin tables are the **starting tables** in the pipeline, with data fetched directly from blockchain RPC nodes. These tables **have no upstream** because they are the starting point of the entire processing chain.
 
-Trong hệ thống hiện tại, các bảng origin thường nằm trong schema `<chain_name>_origin`, ví dụ:
+In the current system, origin tables are typically in the `<chain_name>_origin` schema, e.g.:
 - `ethereum_origin.transaction_blocks`
 - `ethereum_origin.blocks_receipt`
 
 ---
 
-## 4. Cơ chế tính toán khoảng dữ liệu
+## 4. Data Range Calculation Mechanism
 
-### 4.1 Đọc properties khi job bắt đầu
+### 4.1 Reading Properties When Job Starts
 
-Khi một job được chạy, trước khi xử lý dữ liệu, hệ thống thực hiện các bước sau:
+When a job is run, before processing data, the system performs:
 
-1. **Đọc properties của bảng output** — để biết dữ liệu trong bảng hiện tại đang ở khoảng nào (from/to)
-2. **Đọc properties của tất cả các bảng upstream** — để biết dữ liệu trong các bảng input đã được xử lý đến đâu
+1. **Read output table properties** — to know the current data range (from/to)
+2. **Read properties of all upstream tables** — to know how far input data has been processed
 
-### 4.2 Nguyên tắc tính toán khoảng
+### 4.2 Range Calculation Principle
 
-Hệ thống tính toán khoảng dữ liệu cần xử lý trong lần chạy hiện tại dựa trên nguyên tắc: **phải có đủ dữ liệu từ tất cả các bảng upstream**.
+The system calculates the data range to process in the current run based on: **all upstream tables must have sufficient data**.
 
-Điều này có nghĩa là khoảng dữ liệu mà job sẽ xử lý phải là **giao (intersection)** của khoảng dữ liệu khả dụng trên tất cả upstream, đồng thời phải **mở rộng** so với khoảng hiện tại của bảng output (để xử lý dữ liệu mới).
+This means the data range the job will process must be the **intersection** of available ranges across all upstreams, while also being **expanded** relative to the current output range (to process new data).
 
-### 4.3 Hỗ trợ cả backward và forward
+### 4.3 Supporting Both Backward and Forward
 
-Hệ thống hỗ trợ hai chiều xử lý:
+The system supports two processing directions:
 
-| Chế độ | Mô tả | Ví dụ |
+| Mode | Description | Example |
 |---|---|---|
-| `backward` | Xử lý từ block mới nhất về quá khứ | Bảng output có data đến block 1000, upstream có data đến block 1100 → xử lý block 1001–1100 |
-| `forward` | Xử lý từ quá khứ đến block mới nhất | Bảng output có data đến block 1000, upstream có data đến block 1100 → xử lý block 1001–1100 |
+| `backward` | Process from newest block to past | Output has data to block 1000, upstream has data to block 1100 → process blocks 1001–1100 |
+| `forward` | Process from past to newest block | Output has data to block 1000, upstream has data to block 1100 → process blocks 1001–1100 |
 
-Trong cả hai trường hợp, hệ thống luôn đảm bảo rằng khoảng dữ liệu được xử lý có đủ data từ **tất cả** các bảng upstream.
+In both cases, the system always ensures the processed data range has sufficient data from **all** upstream tables.
 
-### 4.4 Xử lý upstream có khoảng dữ liệu khác nhau
+### 4.4 Handling Upstreams with Different Data Ranges
 
-Trong thực tế, các bảng upstream có thể có dữ liệu ở các khoảng khác nhau. Ví dụ:
+In practice, upstream tables may have data in different ranges. Example:
 
 ```
-ethereum_origin.transaction_blocks:  block 0 → 1100  (đã xử lý xong)
-ethereum_origin.blocks_receipt:      block 0 → 1050  (đang xử lý, chưa xong)
-ethereum.blocks (output):            block 0 → 1000  (đã xử lý xong)
+ethereum_origin.transaction_blocks:  block 0 → 1100  (fully processed)
+ethereum_origin.blocks_receipt:      block 0 → 1050  (still processing)
+ethereum.blocks (output):            block 0 → 1000  (fully processed)
 ```
 
-Trong trường hợp này, job sẽ tính toán khoảng cần xử lý là block **1001 → 1050** (giao của upstream, mở rộng so với output), vì đây là khoảng mà cả hai upstream đều đã có đủ dữ liệu.
+In this case, the job calculates the processing range as block **1001 → 1050** (intersection of upstreams, expanded from output), because this is the range where both upstreams have complete data.
 
 ---
 
-## 5. Hai loại bảng: Block-based và Time-based
+## 5. Two Table Types: Block-based and Time-based
 
-Về mặt kỹ thuật, bảng được chia thành 2 loại chính dựa trên `frequentType`. Đây là yếu tố quan trọng nhất khi cấu hình job, vì nó xác định cách hệ thống theo dõi dữ liệu và cách xử lý upstream.
+Technically, tables are divided into 2 main types based on `frequentType`. This is the most important factor when configuring jobs, as it determines how the system tracks data and processes upstreams.
 
-### 5.1 Loại 1: `frequentType = block`
+### 5.1 Type 1: `frequentType = block`
 
-**Đặc điểm:**
-- Theo dõi dữ liệu bằng **block number** (`fromBlock`, `toBlock`)
-- Tất cả các bảng upstream **cũng phải có** `frequentType = block`
-- Khoảng dữ liệu được xác định bởi block range
+**Characteristics:**
+- Tracks data by **block number** (`fromBlock`, `toBlock`)
+- All upstream tables **must also have** `frequentType = block`
+- Data range is determined by block range
 
-**Khi nào dùng:**
-- Bảng dữ liệu cấp block, mỗi bản ghi tương ứng với một block trên blockchain
-- Bảng origin (dữ liệu thô từ RPC)
-- Các bảng extract/contract/token cần truy xuất chính xác theo block
+**When to use:**
+- Block-level data tables, each record corresponds to a blockchain block
+- Origin tables (raw data from RPC)
+- Extract/contract/token tables requiring precise block-level querying
 
-**Ví dụ — Bảng `ethereum.blocks`:**
+**Example — `ethereum.blocks` table:**
 
 ```sql
 frequent_type=block
@@ -172,26 +172,26 @@ list_input_tables=${chain_name}_origin.transaction_blocks,${chain_name}_origin.b
 output_table=${chain_name}.blocks
 ```
 
-Properties theo dõi:
+Properties tracking:
 ```
 fromBlock = 0
 toBlock = 19500000
 ```
 
-Khi chạy lần tiếp theo, hệ thống sẽ xử lý từ block `19500001` trở đi, đảm bảo cả hai upstream đều đã có dữ liệu trong khoảng đó.
+On next run, the system will process from block `19500001` onwards, ensuring both upstreams have data in that range.
 
-### 5.2 Loại 2: `frequentType = minute`, `hour`, hoặc `day`
+### 5.2 Type 2: `frequentType = minute`, `hour`, or `day`
 
-**Đặc điểm:**
-- Theo dõi dữ liệu bằng **thời gian** (`fromEpochSecond`, `toEpochSecond`)
-- Các bảng upstream **có thể có bất kỳ frequentType nào**
-- Khi upstream có `frequentType = block`, hệ thống cần một **bảng origin reference** để ánh xạ block_number → block_time
+**Characteristics:**
+- Tracks data by **time** (`fromEpochSecond`, `toEpochSecond`)
+- Upstream tables **can have any frequentType**
+- When upstream has `frequentType = block`, the system needs an **origin reference table** to map block_number → block_time
 
-**Khi nào dùng:**
-- Bảng tổng hợp theo thời gian (phút, giờ, ngày)
-- Bảng analytics cần dữ liệu theo khung thời gian
+**When to use:**
+- Time-aggregated tables (minute, hour, day)
+- Analytics tables needing data in time frames
 
-**Ví dụ — Bảng theo ngày:**
+**Example — Daily table:**
 
 ```sql
 frequent_type=day
@@ -199,160 +199,160 @@ list_input_tables=${chain_name}.blocks,${chain_name}.transactions
 output_table=${chain_name}.daily_summary
 ```
 
-Properties theo dõi:
+Properties tracking:
 ```
 fromEpochSecond = 1721942400    (2024-07-26 00:00:00 UTC)
 toEpochSecond = 1722028800      (2024-07-27 00:00:00 UTC)
 ```
 
-### 5.3 Xử lý upstream block-based cho bảng time-based
+### 5.3 Handling Block-based Upstreams for Time-based Tables
 
-Khi bảng có `frequentType` là time-based nhưng upstream có `frequentType` là block, hệ thống cần **chuyển đổi block_number → block_time** để xác định khoảng thời gian tương ứng.
+When a table has `frequentType` as time-based but upstream has `frequentType` as block, the system needs to **convert block_number → block_time** to determine the corresponding time range.
 
-Quy trình:
+Process:
 
 ```
-1. Đọc properties của upstream (block-based): fromBlock, toBlock
-2. Đọc origin_table (cấu hình trong application.properties, thường là <chain>.blocks)
-3. Từ origin_table, xác định block_time tương ứng với fromBlock và toBlock
-4. Chuyển đổi thành fromEpochSecond và toEpochSecond
-5. Tính toán khoảng thời gian cần xử lý
+1. Read properties of upstream (block-based): fromBlock, toBlock
+2. Read origin_table (configured in application.properties, usually <chain>.blocks)
+3. From origin_table, determine block_time corresponding to fromBlock and toBlock
+4. Convert to fromEpochSecond and toEpochSecond
+5. Calculate time range to process
 ```
 
-Đây là lý do trong `application.properties` có thuộc tính:
+This is why `application.properties` has:
 
 ```properties
 origin_table=ethereum.blocks
 ```
 
-Thuộc tính này cho biết bảng reference dùng để ánh xạ block → time.
+This property specifies the reference table for mapping block → time.
 
-### 5.4 Nguyên tắc "đủ dữ liệu" cho time-based
+### 5.4 "Sufficient Data" Principle for Time-based
 
-Đây là nguyên tắc quan trọng nhất khi xử lý bảng time-based:
+This is the most important principle when processing time-based tables:
 
-> **Để xử lý dữ liệu cho một khoảng thời gian nhất định, tất cả các bảng upstream phải có dữ liệu bao trùm khoảng thời gian đó (vượt ra ngoài cả hai phía).**
+> **To process data for a specific time range, all upstream tables must have data covering that range (extending beyond both ends).**
 
-Ví dụ cụ thể: Bảng có `frequentType = day` muốn xử lý dữ liệu cho **ngày 2024-07-26**:
+Specific example: A table with `frequentType = day` wants to process data for **July 26, 2024**:
 
-| Upstream | Khoảng dữ liệu | Đủ cho ngày 2024-07-26? |
+| Upstream | Data Range | Sufficient for July 26, 2024? |
 |---|---|---|
-| `ethereum.blocks` (block-based) | block → time: 2024-07-25 18:00 → 2024-07-26 18:00 | **Có** — bao trùm cả ngày 26 |
-| `ethereum.transactions` (block-based) | block → time: 2024-07-25 20:00 → 2024-07-26 06:00 | **Không** — chỉ đến 06:00 ngày 26, thiếu dữ liệu từ 06:00–24:00 |
+| `ethereum.blocks` (block-based) | block → time: 2024-07-25 18:00 → 2024-07-26 18:00 | **Yes** — covers entire day 26 |
+| `ethereum.transactions` (block-based) | block → time: 2024-07-25 20:00 → 2024-07-26 06:00 | **No** — only until 06:00 on day 26, missing data from 06:00–24:00 |
 
-Trong trường hợp này, job **không thể** xử lý ngày 2024-07-26 vì upstream `transactions` chưa đủ dữ liệu. Job sẽ đợi cho đến khi cả hai upstream đều có dữ liệu vượt ra ngoài ngày 26.
+In this case, the job **cannot** process July 26, 2024 because upstream `transactions` doesn't have sufficient data. The job will wait until both upstreams have data extending beyond day 26.
 
-**Tóm lại:** Nguyên tắc này đảm bảo rằng dữ liệu trong bảng time-based luôn **đầy đủ** — không bao giờ có tình trạng dữ liệu bị thiếu do upstream chưa xử lý xong.
+**Summary:** This principle ensures data in time-based tables is always **complete** — never having data gaps due to upstream not finishing processing.
 
 ---
 
-## 6. Cơ chế xử lý lỗi và đảm bảo dữ liệu
+## 6. Error Handling and Data Integrity Mechanisms
 
-### 6.1 Job thất bại trong khi ghi dữ liệu
+### 6.1 Job Fails During Data Writing
 
-Nếu job bị lỗi trong quá trình ghi dữ liệu (ví dụ: crash, OOM, network error), hệ thống xử lý như sau:
+If a job errors during data writing (e.g., crash, OOM, network error), the system handles as follows:
 
 ```
-Lần chạy hiện tại:
-    - Dữ liệu đã được ghi một phần vào bảng (có thể bị corrupt)
-    - Properties KHÔNG được cập nhật (vì ghi chưa thành công)
+Current run:
+    - Data may have been partially written to table (possibly corrupt)
+    - Properties NOT updated (because write wasn't successful)
 
-Lần chạy tiếp theo:
-    1. Hệ thống đọc properties → phát hiện dữ liệu chưa được xác nhận
-    2. Kiểm tra xem bảng có dữ liệu "treo" từ lần chạy trước không
-    3. Nếu có → XÓA dữ liệu treo đó trước khi ghi dữ liệu mới
-    4. Tiến hành xử lý và ghi dữ liệu từ đầu
+Next run:
+    1. System reads properties → detects unconfirmed data
+    2. Checks for "hanging" data from previous run
+    3. If found → DELETES hanging data before writing new data
+    4. Proceeds to process and write data from scratch
 ```
 
-### 6.2 Tại sao phải xóa dữ liệu cũ trước khi ghi mới
+### 6.2 Why Old Data Must Be Deleted Before Writing New
 
-Nguyên tắc quan trọng: **dữ liệu trong bảng phải luôn chính xác**. Nếu lần chạy trước crash giữa chừng, dữ liệu trong bảng có thể ở trạng thái không nhất quán (ví dụ: một partition đã ghi, partition khác chưa). Việc xóa dữ liệu cũ đảm bảo rằng sau khi job chạy thành công, bảng chỉ chứa dữ liệu đã được xác nhận là đúng.
+Important principle: **data in the table must always be accurate**. If a previous run crashed midway, data in the table may be in an inconsistent state (e.g., one partition written, another not). Deleting old data ensures that after the job completes successfully, the table contains only confirmed correct data.
 
-### 6.3 Retry mechanism
+### 6.3 Retry Mechanism
 
-Hệ thống hỗ trợ cấu hình retry cho mỗi job:
+The system supports retry configuration for each job:
 
 ```properties
-max_retry=10           # Số lần thử lại tối đa khi một partition gặp lỗi
-wait_miliseconds=100   # Thời gian chờ giữa mỗi lần retry
+max_retry=10           # Maximum retry count when a partition encounters an error
+wait_miliseconds=100   # Wait time between each retry
 ```
 
 ---
 
-## 7. Tóm tắt flow chạy của một job
+## 7. Job Execution Flow Summary
 
-Dưới đây là flow tổng quát khi một job được chạy:
+Below is the general flow when a job runs:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    JOB BẮT ĐẦU                         │
+│                    JOB STARTS                            │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  1. Đọc application.properties                         │
-│     → Lấy chain_name, run_mode, origin_table, ...      │
+│  1. Read application.properties                         │
+│     → Get chain_name, run_mode, origin_table, ...       │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  2. Đọc properties của bảng OUTPUT                     │
-│     → Lấy fromBlock/toBlock hoặc from/toEpochSecond    │
-│     → Lấy upstream list (nếu bảng đã tồn tại)         │
+│  2. Read properties of OUTPUT table                     │
+│     → Get fromBlock/toBlock or from/toEpochSecond       │
+│     → Get upstream list (if table exists)               │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  3. Đọc properties của tất cả các bảng UPSTREAM        │
-│     → Xác định khoảng dữ liệu khả dụng trên mỗi input │
+│  3. Read properties of all UPSTREAM tables              │
+│     → Determine available data range per input          │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  4. Tính toán khoảng dữ liệu cần xử lý                │
-│     → Giao của khoảng upstream                         │
-│     → Mở rộng so với khoảng hiện tại của output        │
-│     → Nếu frequentType=time và upstream=block:         │
-│       dùng origin_table để map block → time            │
+│  4. Calculate data range to process                     │
+│     → Intersection of upstream ranges                   │
+│     → Expanded relative to current output range         │
+│     → If frequentType=time and upstream=block:          │
+│       use origin_table to map block → time              │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  5. Kiểm tra dữ liệu treo từ lần chạy trước           │
-│     → Nếu có → Xóa dữ liệu treo                       │
+│  5. Check for hanging data from previous run            │
+│     → If found → Delete hanging data                    │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  6. Xử lý dữ liệu theo partition                      │
-│     → Chia thành các partition theo number_block_per_   │
-│       partition hoặc khoảng thời gian                   │
-│     → Xử lý max_number_partition trong mỗi vòng lặp    │
-│     → Lặp tối đa max_time_run vòng                     │
+│  6. Process data by partition                           │
+│     → Split into partitions by number_block_per_        │
+│       partition or time range                           │
+│     → Process max_number_partition per iteration        │
+│     → Loop up to max_time_run iterations                │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  7. GHI DỮ LIỆU VÀO BẢNG                              │
-│     → Nếu thành công: CẬP NHẬT properties              │
-│     → Nếu thất bại: KHÔNG cập nhật, lần sau sẽ         │
-│       quay lại bước 5 và xử lý lại                     │
+│  7. WRITE DATA TO TABLE                                 │
+│     → If success: UPDATE properties                     │
+│     → If failure: NO update, next run will              │
+│       return to step 5 and reprocess                    │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    JOB KẾT THÚC                         │
+│                    JOB ENDS                              │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 8. Ví dụ thực tế
+## 8. Real-world Examples
 
-### Pipeline Ethereum — Graph phụ thuộc
+### Ethereum Pipeline — Dependency Graph
 
 ```
-ORIGIN (frequentType=block, không có upstream)
+ORIGIN (frequentType=block, no upstream)
 ├── ethereum_origin.transaction_blocks
 └── ethereum_origin.blocks_receipt
 
@@ -378,27 +378,27 @@ TOKEN (frequentType=block)
                   ethereum_contract.erc20_tokens
 ```
 
-### Ví dụ tính toán khoảng cho `ethereum.blocks`
+### Range Calculation Example for `ethereum.blocks`
 
-**Trạng thái hiện tại:**
+**Current state:**
 ```
 ethereum_origin.transaction_blocks: fromBlock=0, toBlock=19500000
 ethereum_origin.blocks_receipt:     fromBlock=0, toBlock=19500000
 ethereum.blocks (output):           fromBlock=0, toBlock=19400000
 ```
 
-**Khi chạy job `ethereum.blocks`:**
-1. Upstream khả dụng: block 0 → 19500000 (cả hai đều có)
-2. Output hiện tại: block 0 → 19400000
-3. Khoảng cần xử lý: block **19400001 → 19500000**
-4. Chia thành partition: mỗi partition 300 block → ~333 partitions
-5. Xử lý theo `max_number_partition=1`, lặp `max_time_run=1` → xử lý 1 partition mỗi lần chạy
+**When running `ethereum.blocks` job:**
+1. Available upstream: block 0 → 19500000 (both have data)
+2. Current output: block 0 → 19400000
+3. Range to process: block **19400001 → 19500000**
+4. Split into partitions: 300 blocks per partition → ~333 partitions
+5. Process with `max_number_partition=1`, loop `max_time_run=1` → process 1 partition per run
 
-### Ví dụ tính toán khoảng cho bảng time-based
+### Range Calculation Example for Time-based Table
 
-Giả sử có bảng `ethereum.daily_active_contracts` với `frequentType=day`:
+Assume table `ethereum.daily_active_contracts` with `frequentType=day`:
 
-**Trạng thái hiện tại:**
+**Current state:**
 ```
 ethereum.blocks (upstream, block-based):
     fromBlock=0, toBlock=19500000
@@ -412,25 +412,25 @@ ethereum.daily_active_contracts (output, day-based):
     fromEpochSecond → toEpochSecond: 2015-07-30 → 2024-07-24
 ```
 
-**Khi chạy job:**
-1. Upstream `blocks` có data đến 2024-07-26 18:00
-2. Upstream `decoded.erc20_evt_transfer` có data đến 2024-07-25 12:00
-3. Output đã xử lý đến 2024-07-24
-4. Giao upstream: cả hai đều có data đến **2024-07-25 12:00**
-5. Job có thể xử lý các ngày **2024-07-25** (vì đã có đủ data cả ngày từ cả hai upstream)
-6. **Không thể** xử lý 2024-07-26 vì `erc20_evt_transfer` mới chỉ đến 12:00 ngày 25 → chưa đủ data cho cả ngày 26
+**When running job:**
+1. Upstream `blocks` has data to 2024-07-26 18:00
+2. Upstream `decoded.erc20_evt_transfer` has data to 2024-07-25 12:00
+3. Output processed to 2024-07-24
+4. Upstream intersection: both have data to **2024-07-25 12:00**
+5. Job can process **July 25, 2024** (sufficient full-day data from both upstreams)
+6. **Cannot** process 2024-07-26 because `erc20_evt_transfer` only has data to 12:00 on day 25 → insufficient for full day 26
 
 ---
 
-## 9. Cơ chế hoạt động của `pre_decode_tables` và `register_evm_call`
+## 9. `pre_decode_tables` and `register_evm_call` Mechanics
 
-Hai config `pre_decode_tables` (dùng trong job decode event) và `register_evm_call` (dùng trong job lấy metadata contract) là các cơ chế đặc biệt giúp SQL job giao tiếp trực tiếp với blockchain qua EVM engine. Cả hai đều được khai báo trong header của file `.sql` và được engine xử lý trước/bên cạnh khi chạy SQL body.
+Two configurations `pre_decode_tables` (used in event decode jobs) and `register_evm_call` (used in contract metadata jobs) are special mechanisms that allow SQL jobs to communicate directly with the blockchain via the EVM engine. Both are declared in the `.sql` file header and processed by the engine before/alongside the SQL body execution.
 
-### 9.1 `pre_decode_tables` — Cơ chế decode event
+### 9.1 `pre_decode_tables` — Event Decode Mechanism
 
-**Vai trò**: Khai báo một hoặc nhiều tên temp table (cách nhau bởi dấu `,` và không có dấu cách) mà decode engine sẽ ghi kết quả decode event vào trước khi SQL body chạy. SQL body chỉ việc đọc từ các temp table này.
+**Role**: Declares one or more temp table names (comma-separated without spaces) that the decode engine writes decoded event results to before the SQL body runs. The SQL body then simply reads from these temp tables.
 
-**Khai báo trong template `evm_contract/decode_log.sql`**:
+**Declaration in `evm_contract/decode_log.sql` template**:
 
 ```
 frequent_type=block
@@ -444,51 +444,51 @@ write_mode=Append
 number_index_columns=3
 ```
 
-Một bảng decode tương ứng một output_table. Muốn decode nhiều event khác nhau (nhiều ABI) trong cùng một job, liệt kê nhiều tên cách nhau bởi dấu `,` **không có dấu cách**:
+One decode table corresponds to one output_table. To decode multiple events (multiple ABIs) in the same job, list multiple names comma-separated **without spaces**:
 
 ```
 pre_decode_tables=uniswap_v2_evt_swap,sushiswap_evt_swap,curve_evt_tokenexchange
 ```
 
-**Cơ chế hoạt động**:
+**How it works**:
 
 ```
-Job chạy
+Job runs
     │
     ▼
-1. Đọc logs thô từ list_input_tables / logs_table_name (ví dụ ethereum.logs)
+1. Read raw logs from list_input_tables / logs_table_name (e.g., ethereum.logs)
     │
     ▼
-2. Với mỗi tên trong pre_decode_tables, decode engine tìm ABI tương ứng
-   → strip hậu tố _evt_* → tìm file ABI (ví dụ uniswap_v3_evt_swap → uniswap_v3.json)
+2. For each name in pre_decode_tables, decode engine finds matching ABI
+   → strips _evt_* suffix → finds ABI file (e.g., uniswap_v3_evt_swap → uniswap_v3.json)
     │
     ▼
-3. Engine decode các event logs theo từng ABI trong block range hiện tại
+3. Engine decodes event logs per ABI within current block range
     │
     ▼
-4. Kết quả decode của mỗi ABI được ghi vào temp table có tên tương ứng trong pre_decode_tables
+4. Decode results for each ABI are written to temp table with corresponding name in pre_decode_tables
     │
     ▼
-5. SQL body chạy: select * from ${pre_decode_tables}
-   (hoặc custom: join/union nhiều temp table, thêm metadata rồi mới output)
+5. SQL body runs: select * from ${pre_decode_tables}
+   (or custom: join/union multiple temp tables, add metadata before output)
     │
     ▼
-6. Kết quả ghi vào output_table (<chain>_decoded.<table_name>)
+6. Results written to output_table (<chain>_decoded.<table_name>)
 ```
 
-**Điểm quan trọng**:
-- Mỗi tên trong `pre_decode_tables` chính là `table_name` base của một event (ví dụ `uniswap_v3_evt_swap`), **KHÔNG** cần `_dev` suffix và không bao gồm schema — đây là tên temp table do decode engine tạo, không phải bảng production
-- Mỗi temp table tương ứng **một ABI riêng** (strip hậu tố `_evt_*`) và được decode độc lập
-- Bảng output vẫn là bảng `<chain>_decoded.<table_name>` thực tế, được engine tạo từ temp table qua SQL body
-- Column names trong output giữ nguyên theo ABI parameter names (camelCase), KHÔNG convert sang snake_case
-- SQL body có thể custom (join pool metadata, transform, ...) để enrich dữ liệu decoded trước khi ghi ra output table
-- `number_index_columns=3` tương ứng `block_date, block_number, block_time` — 3 cột index đầu tiên
+**Important points**:
+- Each name in `pre_decode_tables` is the base `table_name` of an event (e.g., `uniswap_v3_evt_swap`), does NOT need `_dev` suffix and doesn't include schema — this is the temp table name created by the decode engine, not a production table
+- Each temp table corresponds to **one ABI** (strips `_evt_*` suffix) and is decoded independently
+- Output table is the actual `<chain>_decoded.<table_name>` table, created by the engine from temp tables via SQL body
+- Column names in output retain ABI parameter names (camelCase), NOT converted to snake_case
+- SQL body can be customized (join pool metadata, transform, etc.) to enrich decoded data before writing to output table
+- `number_index_columns=3` corresponds to `block_date, block_number, block_time` — first 3 index columns
 
-### 9.2 `register_evm_call` — Cơ chế gọi view function của contract
+### 9.2 `register_evm_call` — Contract View Function Calling Mechanism
 
-**Vai trò**: Đăng ký một hoặc nhiều ABI file (cách nhau bởi dấu `,` và không có dấu cách) để SQL body có thể gọi được các **view function** của smart contract (name, symbol, decimals, ...) trực tiếp qua RPC, phục vụ cho việc lấy metadata contract mà không cần lưu trong bảng event.
+**Role**: Registers one or more ABI files (comma-separated without spaces) so SQL body can call smart contract **view functions** (name, symbol, decimals, ...) directly via RPC, for fetching contract metadata without storing in event tables.
 
-**Khai báo trong SQL file** (ví dụ `evm_contract/erc20_tokens.sql`):
+**Declaration in SQL file** (e.g., `evm_contract/erc20_tokens.sql`):
 
 ```
 frequent_type=block
@@ -500,78 +500,78 @@ write_mode=Append
 number_index_columns=1
 ```
 
-Muốn gọi thêm view function từ các ABI khác trong cùng một job, liệt kê nhiều tên cách nhau bởi dấu `,` **không có dấu cách**:
+To call view functions from additional ABIs in the same job, list multiple names comma-separated **without spaces**:
 
 ```
 register_evm_call=erc20,dex_pool
 ```
 
-**Cơ chế hoạt động**:
+**How it works**:
 
 ```
-Job chạy
+Job runs
     │
     ▼
-1. Engine đọc config register_evm_call (ví dụ erc20,dex_pool)
-   → map mỗi tên sang file ABI chainslake/evm/abi/<tên>.json
+1. Engine reads register_evm_call config (e.g., erc20,dex_pool)
+   → maps each name to ABI file chainslake/evm/abi/<name>.json
     │
     ▼
-2. Engine đăng ký SQL function tên <abi_name> cho từng ABI
-   (ví dụ: erc20(...), dex_pool(...))
+2. Engine registers SQL function named <abi_name> for each ABI
+   (e.g.: erc20(...), dex_pool(...))
     │
     ▼
-3. SQL body gọi erc20(CONCAT(contract_address, ' name')) cho từng contract mới
+3. SQL body calls erc20(CONCAT(contract_address, ' name')) for each new contract
     │
     ▼
-4. Engine parse argument: tách contract_address, tên function và các parameter
-   (cách nhau bởi dấu cách) → tìm function trong ABI đã đăng ký
+4. Engine parses argument: splits contract_address, function name and parameters
+   (separated by spaces) → finds function in registered ABI
     │
     ▼
-5. Engine gọi eth_call qua RPC tới contract tại address, truyền các parameter vào view function
+5. Engine calls eth_call via RPC to contract at address, passing parameters to view function
     │
     ▼
-6. Kết quả trả về dạng string → cast nếu cần (ví dụ decimals → INT)
+6. Result returned as string → cast if needed (e.g., decimals → INT)
     │
     ▼
-7. Kết quả ghi vào output_table (<chain>_contract.<table_name>)
+7. Result written to output_table (<chain>_contract.<table_name>)
 ```
 
-**Điểm quan trọng**:
-- Mỗi giá trị trong `register_evm_call` = tên file ABI (bỏ `.json`): `erc20` → file `erc20.json`, `dex_pool` → file `dex_pool.json`; mỗi ABI đăng ký một SQL function mang tên của nó (`erc20(...)`, `dex_pool(...)`)
-- **Cú pháp gọi**: `<abi_name>(CONCAT(contract_address, ' <function_name>'))` — có **đúng 1 space** giữa address và tên function
-- **Function có nhiều parameter**: nối các parameter ngay sau tên function, cách nhau bởi **dấu cách** (không dùng ký tự phân tách khác như `,`):
-  - Không tham số: `erc20(CONCAT(contract_address, ' name'))`
-  - 1 tham số: `dex_pool(CONCAT(pool_address, ' coins 0'))` → `coins(uint256 index)`
-  - Nhiều tham số: `<abi_name>(CONCAT(address, ' function_name param1 param2 ...'))`
-- Tên function phải khớp chính xác với `"name"` trong ABI
-- Function trả về dạng string; nếu cần kiểu khác phải `cast` (ví dụ `decimals` là `uint256` nhưng trả về string → `cast(... as INT)`)
-- Job cần cấu hình `rpc_list` (biến env `$<CHAIN>_RPCS`) để engine gọi được RPC — `.sh` phải `export $(cat $CHAINSLAKE_RUN_DIR/.env)`
-- `number_index_columns=1`: `contract_address` là index column, kết hợp logic `${if table_existed}` trong SQL để **chống lặp** — chỉ gọi function cho các contract mới chưa có trong output table
+**Important points**:
+- Each value in `register_evm_call` = ABI file name (without `.json`): `erc20` → file `erc20.json`, `dex_pool` → file `dex_pool.json`; each ABI registers a SQL function named after itself (`erc20(...)`, `dex_pool(...)`)
+- **Call syntax**: `<abi_name>(CONCAT(contract_address, ' <function_name>'))` — exactly **1 space** between address and function name
+- **Functions with multiple parameters**: append parameters after function name, separated by **spaces** (not commas):
+  - No parameters: `erc20(CONCAT(contract_address, ' name'))`
+  - 1 parameter: `dex_pool(CONCAT(pool_address, ' coins 0'))` → `coins(uint256 index)`
+  - Multiple parameters: `<abi_name>(CONCAT(address, ' function_name param1 param2 ...'))`
+- Function name must exactly match `"name"` in ABI
+- Function returns string; cast if other type needed (e.g., `decimals` is `uint256` but returns string → `cast(... as INT)`)
+- Job needs `rpc_list` config (`$<CHAIN>_RPCS` env var) for engine to call RPC — `.sh` must `export $(cat $CHAINSLAKE_RUN_DIR/.env)`
+- `number_index_columns=1`: `contract_address` is index column, combined with `${if table_existed}` logic in SQL for **deduplication** — only calls function for new contracts not yet in output table
 
-### 9.3 Tóm tắt so sánh
+### 9.3 Comparison Summary
 
-| Đặc điểm | `pre_decode_tables` | `register_evm_call` |
+| Feature | `pre_decode_tables` | `register_evm_call` |
 |---|---|---|
-| Mục đích | Decode event từ logs có sẵn | Gọi view function lấy metadata contract |
-| Input | Bảng logs thô (`<chain>.logs`) | Bảng event đã decode (chứa `contract_address`) |
+| Purpose | Decode events from existing logs | Call view functions to fetch contract metadata |
+| Input | Raw logs table (`<chain>.logs`) | Decoded event table (with `contract_address`) |
 | Output | `<chain>_decoded.<table_name>` | `<chain>_contract.<table_name>` |
-| Cần RPC | Không (chỉ decode từ dữ liệu logs đã có) | Có (`rpc_list`) |
-| Engine thao tác | Decode engine ghi temp table trước SQL | EVM call engine đăng ký function cho SQL |
-| Kết hợp chống lặp | Không cần (dữ liệu logs là duy nhất) | Có (`${if table_existed}` + index column) |
+| Needs RPC | No (only decodes from existing log data) | Yes (`rpc_list`) |
+| Engine action | Decode engine writes temp table before SQL | EVM call engine registers functions for SQL |
+| Deduplication | Not needed (log data is unique) | Yes (`${if table_existed}` + index column) |
 
 ---
 
-## Tham chiếu nhanh
+## Quick Reference
 
-| Thành phần | Vai trò |
+| Component | Role |
 |---|---|
-| `application.properties` | Cấu hình chung: chain_name, run_mode, number_block_per_partition, origin_table, ... |
-| File `.sql` header (`list_input_tables`) | Khai báo upstream của bảng output |
-| File `.sql` header (`frequent_type`) | Xác định loại bảng: block hoặc time-based |
-| File `.sql` header (`output_table`) | Bảng output duy nhất của job |
-| File `.sql` body (`${from}`, `${to}`) | Biến động do hệ thống tính toán, không cần set thủ công |
-| File `.sql` header (`pre_decode_tables`) | Danh sách tên temp table (cách nhau bởi `,` không dấu cách) do decode engine ghi kết quả decode event trước khi SQL body chạy (xem [Phần 9.1](#91-pre_decode_tables--cơ-chế-decode-event)) |
-| File `.sql` header (`register_evm_call`) | Đăng ký một hoặc nhiều ABI file (cách nhau bởi `,` không dấu cách) để SQL gọi được view function của contract qua RPC (xem [Phần 9.2](#92-register_evm_call--cơ-chế-gọi-view-function-của-contract)) |
-| Properties `fromBlock/toBlock` | Theo dõi khoảng block (block-based) |
-| Properties `fromEpochSecond/toEpochSecond` | Theo dõi khoảng thời gian (time-based) |
-| `origin_table` trong application.properties | Bảng reference để map block → time (cho time-based job) |
+| `application.properties` | Common config: chain_name, run_mode, number_block_per_partition, origin_table, ... |
+| `.sql` header (`list_input_tables`) | Declares upstream of output table |
+| `.sql` header (`frequent_type`) | Determines table type: block or time-based |
+| `.sql` header (`output_table`) | Single output table of job |
+| `.sql` body (`${from}`, `${to}`) | Dynamic variables calculated by system, no manual setting needed |
+| `.sql` header (`pre_decode_tables`) | List of temp table names (comma-separated without spaces) that decode engine writes decoded event results to before SQL body runs (see [Section 9.1](#91-pre_decode_tables--event-decode-mechanism)) |
+| `.sql` header (`register_evm_call`) | Registers one or more ABI files (comma-separated without spaces) for SQL to call contract view functions via RPC (see [Section 9.2](#92-register_evm_call--contract-view-function-calling-mechanism)) |
+| Properties `fromBlock/toBlock` | Tracks block range (block-based) |
+| Properties `fromEpochSecond/toEpochSecond` | Tracks time range (time-based) |
+| `origin_table` in application.properties | Reference table for mapping block → time (for time-based jobs) |

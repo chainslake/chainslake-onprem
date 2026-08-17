@@ -1,14 +1,14 @@
 # ethereum_origin.transaction_blocks
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:45:00 |
-| Ngày update gần nhất | 2026-07-26 17:01:26 |
-| Số bản ghi | 2107 |
-| Số file | 14 |
-| Dung lượng | 324.9 MB |
+| Created date | 2026-07-12 15:45:00 |
+| Last updated | 2026-07-26 17:01:26 |
+| Row count | 2107 |
+| File count | 14 |
+| Size | 324.9 MB |
 | frequentType | block |
 | fromBlock | 25516315 |
 | toBlock | 25518421 |

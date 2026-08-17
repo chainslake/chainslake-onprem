@@ -1,6 +1,6 @@
 # Docs Index
 
-Danh sách tất cả bài toán đã/will đang xử lý.
+List of all problems being/already processed.
 
-| Bài toán | Trạng thái | Ngày tạo | Mô tả |
+| Problem | Status | Created Date | Description |
 |---|---|---|---|

@@ -1,14 +1,14 @@
 # ethereum.logs
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:49:25 |
-| Ngày update gần nhất | 2026-07-26 16:44:47 |
-| Số bản ghi | 1196126 |
-| Số file | 10 |
-| Dung lượng | 100.8 MB |
+| Created date | 2026-07-12 15:49:25 |
+| Last updated | 2026-07-26 16:44:47 |
+| Row count | 1196126 |
+| File count | 10 |
+| Size | 100.8 MB |
 | frequentType | block |
 | fromBlock | 25516616 |
 | toBlock | 25518120 |

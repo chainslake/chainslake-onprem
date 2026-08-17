@@ -1,14 +1,14 @@
 # ethereum_origin.blocks_receipt
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:11:49 |
-| Ngày update gần nhất | 2026-07-26 17:04:30 |
-| Số bản ghi | 2107 |
-| Số file | 16 |
-| Dung lượng | 321.5 MB |
+| Created date | 2026-07-12 15:11:49 |
+| Last updated | 2026-07-26 17:04:30 |
+| Row count | 2107 |
+| File count | 16 |
+| Size | 321.5 MB |
 | frequentType | block |
 | fromBlock | 25516315 |
 | toBlock | 25518421 |

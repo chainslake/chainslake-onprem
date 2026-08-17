@@ -1,27 +1,27 @@
 # CODING_CONVENTIONS.md — Chainslake Coding Conventions
 
-> Conventions dự án **BẮT BUỘC tuân thủ** khi phát triển job/pipeline.
+> Project conventions that **MUST be followed** when developing jobs/pipelines.
 
-## 1. Cấu trúc pipeline cho một blockchain mới
+## 1. Pipeline Structure for a New Blockchain
 
 ```
 chainslake/jobs/<chain_name>/
 ├── application.properties
-├── origin/          # Job lấy dữ liệu thô từ RPC
-├── extract/         # Job biến đổi dữ liệu thô
-├── contract/        # Job decode smart contract
-└── token/           # Job tạo bảng dữ liệu token (nếu có)
+├── origin/          # Jobs that fetch raw data from RPC
+├── extract/         # Jobs that transform raw data
+├── contract/        # Jobs that decode smart contracts
+└── token/           # Jobs that create token data tables (if applicable)
 ```
 
-## 2. Cấu trúc file `.sh` (job script)
+## 2. `.sh` File Structure (Job Script)
 
-Mỗi job script gọi `chainslake-run.sh` với các tham số:
-- `--class`: Java/Scala class cần thực thi
-- `--name`: Tên Spark app (format: `<ChainName><JobName>`)
-- `--conf spark.app_properties.app_name`: Tên app logic
-- `--conf spark.app_properties.config_file`: Path đến `application.properties`
+Each job script calls `chainslake-run.sh` with the following parameters:
+- `--class`: Java/Scala class to execute
+- `--name`: Spark app name (format: `<ChainName><JobName>`)
+- `--conf spark.app_properties.app_name`: Logic app name
+- `--conf spark.app_properties.config_file`: Path to `application.properties`
 
-**Ví dụ chuẩn (job dùng `sql.transformer`):**
+**Standard example (job using `sql.transformer`):**
 ```bash
 $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.sql.Main \
     --name EthereumBlocks \
@@ -30,7 +30,7 @@ $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.sql.Main \
     --conf "spark.app_properties.sql_file=evm/blocks.sql"
 ```
 
-**Ví dụ chuẩn (job origin, cần load `.env`):**
+**Standard example (origin job, needs `.env` loaded):**
 ```bash
 export $(cat $CHAINSLAKE_RUN_DIR/.env) && $CHAINSLAKE_RUN_DIR/chainslake-run.sh --class chainslake.evm.Main \
     --name EthereumOriginBlocksReceipt \
@@ -39,47 +39,47 @@ export $(cat $CHAINSLAKE_RUN_DIR/.env) && $CHAINSLAKE_RUN_DIR/chainslake-run.sh 
     --conf "spark.app_properties.config_file=ethereum/application.properties"
 ```
 
-## 3. Cấu trúc file `.sql`
+## 3. `.sql` File Structure
 
-Mỗi file `.sql` gồm hai phần phân tách bởi `===`:
+Each `.sql` file consists of two sections separated by `===`:
 
 ```
-<header: key=value config>
+<header: key=value configuration>
 ===
 <body: SQL logic>
 ```
 
-**Các config header quan trọng:**
+**Important header configurations:**
 
-| Config | Mô tả |
+| Config | Description |
 |---|---|
-| `frequent_type` | Loại tần suất xử lý: `block`, `day`, v.v. |
-| `list_input_tables` | Bảng input, dùng `${chain_name}` làm prefix schema |
-| `output_table` | Bảng output |
-| `partition_by` | Cột partition |
-| `write_mode` | `Append` hoặc `Overwrite` |
-| `number_index_columns` | Số cột index đầu tiên |
+| `frequent_type` | Processing frequency type: `block`, `day`, etc. |
+| `list_input_tables` | Input tables, use `${chain_name}` as schema prefix |
+| `output_table` | Output table |
+| `partition_by` | Partition column |
+| `write_mode` | `Append` or `Overwrite` |
+| `number_index_columns` | Number of leading index columns |
 
-**Biến động trong SQL:**
-- `${chain_name}` — tên blockchain, lấy từ `application.properties`
-- `${from}`, `${to}` — range block của lần chạy hiện tại, hệ thống tự tính
-- `${table_name}` — tham chiếu đến bảng input trong phần body (dùng tên bảng không có schema)
+**Dynamic variables in SQL:**
+- `${chain_name}` — blockchain name, sourced from `application.properties`
+- `${from}`, `${to}` — block range for the current run, auto-calculated by the system
+- `${table_name}` — reference to input tables in the body section (use table name without schema)
 
-## 4. Naming convention cho bảng
+## 4. Table Naming Conventions
 
-| Schema | Mô tả | Ví dụ |
+| Schema | Description | Example |
 |---|---|---|
-| `<chain>_origin` | Dữ liệu thô từ RPC | `ethereum_origin.transaction_blocks` |
-| `<chain>` | Dữ liệu chuẩn hóa | `ethereum.blocks`, `ethereum.transactions` |
-| `<chain>_decoded` | Dữ liệu contract đã decode | `ethereum_decoded.erc20_evt_transfer` |
-| `<chain>_contract` | Metadata contract | `ethereum_contract.erc20_tokens` |
-| `<chain>_token` | Dữ liệu token tổng hợp | `ethereum_token.erc20_transfer` |
+| `<chain>_origin` | Raw data from RPC | `ethereum_origin.transaction_blocks` |
+| `<chain>` | Normalized data | `ethereum.blocks`, `ethereum.transactions` |
+| `<chain>_decoded` | Decoded contract data | `ethereum_decoded.erc20_evt_transfer` |
+| `<chain>_contract` | Contract metadata | `ethereum_contract.erc20_tokens` |
+| `<chain>_token` | Aggregated token data | `ethereum_token.erc20_transfer` |
 
-## 5. Cấu trúc Airflow DAG
+## 5. Airflow DAG Structure
 
-- Một DAG per blockchain
-- Schedule mặc định: `"10 0 * * *"` (chạy lúc 0:10 mỗi ngày)
+- One DAG per blockchain
+- Default schedule: `"10 0 * * *"` (runs at 0:10 daily)
 - `max_active_runs=1`, `max_active_tasks=10`
 - `is_paused_upon_creation=True`
-- Thứ tự task theo dependency thực tế của dữ liệu
-- Dùng `BashOperator` gọi trực tiếp shell script tương ứng
+- Task order follows actual data dependencies
+- Use `BashOperator` to directly invoke corresponding shell scripts

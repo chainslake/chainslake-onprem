@@ -1,36 +1,36 @@
 # Script Index
 
-Thư mục này chứa các Python script do Agent tự viết để phục vụ các tác vụ lặp lại hoặc cần tool đặc biệt.
+This directory contains Python scripts written by Agents to serve repetitive tasks or special tooling needs.
 
-> **Hướng dẫn cho Agent**: Trước khi viết script mới, kiểm tra index này để tránh trùng lặp. Sau khi viết script mới, cập nhật index này ngay lập tức.
+> **Agent Instructions**: Before writing a new script, check this index to avoid duplicates. After writing a new script, update this index immediately.
 
-> **Cấu hình credentials**: Tất cả credentials nằm trong `script/.env` (gitignored). Copy `script/env_example` thành `script/.env` và điền thông tin thực tế.
+> **Credentials Configuration**: All credentials are in `script/.env` (gitignored). Copy `script/env_example` to `script/.env` and fill in actual values.
 
 ---
 
 ## check_rpcs.py
-- **Mục đích**: Kiểm tra danh sách RPC của bất kỳ EVM chain nào từ chainlist.org. Xác nhận từng RPC có hỗ trợ đầy đủ 3 API cần thiết (eth_blockNumber, eth_getBlockByNumber, eth_getBlockReceipts) và in ra chuỗi `<ENV_VAR>=...` để dán vào `.env`.
+- **Purpose**: Check RPC list for any EVM chain from chainlist.org. Validates that each RPC fully supports the 3 required APIs (eth_blockNumber, eth_getBlockByNumber, eth_getBlockReceipts) and outputs the `<ENV_VAR>=...` string to paste into `.env`.
 - **Input**:
-  - Positional: `chain` — chain ID (số, ví dụ `56`) hoặc tên chain (substring, ví dụ `"BNB Smart Chain Mainnet"`)
-  - `--timeout` — timeout mỗi request (giây, mặc định 10)
-  - `--workers` — số luồng song song (mặc định 10)
-  - `--env-var` — tên biến môi trường output (mặc định: tự suy từ tên chain, ví dụ `BNB_RPCS`)
-- **Output**: PASS/FAIL từng RPC + dòng `<ENV_VAR>=<rpc1,rpc2,...>` để copy vào `chainslake-run/.env`
-- **Ví dụ**:
+  - Positional: `chain` — chain ID (number, e.g., `56`) or chain name (substring, e.g., `"BNB Smart Chain Mainnet"`)
+  - `--timeout` — timeout per request (seconds, default 10)
+  - `--workers` — number of parallel threads (default 10)
+  - `--env-var` — output environment variable name (default: auto-inferred from chain name, e.g., `BNB_RPCS`)
+- **Output**: PASS/FAIL per RPC + `<ENV_VAR>=<rpc1,rpc2,...>` line to copy into `chainslake-run/.env`
+- **Examples**:
   - `python script/check_rpcs.py 56`
   - `python script/check_rpcs.py 1 --env-var ETHEREUM_RPCS`
 
 ---
 
 ## setup_metabase.py
-- **Mục đích**: Thiết lập Metabase on-premise từ đầu: tạo admin account, tạo API key, thêm SparkSQL/Trino database connections, authenticate Metabase CLI (`mb`).
-- **Config**: Đọc từ `script/.env` — `METABASE_URL`, `METABASE_EMAIL`, `METABASE_PASSWORD`, `METABASE_SITE_NAME`
+- **Purpose**: Set up on-premise Metabase from scratch: create admin account, create API key, add SparkSQL/Trino database connections, authenticate Metabase CLI (`mb`).
+- **Config**: Reads from `script/.env` — `METABASE_URL`, `METABASE_EMAIL`, `METABASE_PASSWORD`, `METABASE_SITE_NAME`
 - **Input**:
-  - `--skip-databases` — Bỏ qua bước thêm database
-  - `--skip-cli` — Bỏ qua bước setup Metabase CLI
-  - `--api-key-file` — Đường dẫn ghi file `.env` chứa API key (mặc định: `query/.env`)
-- **Output**: Admin account, API key trong `query/.env`, database connections, CLI authenticated
-- **Ví dụ**:
+  - `--skip-databases` — Skip adding databases
+  - `--skip-cli` — Skip Metabase CLI setup
+  - `--api-key-file` — Path to write `.env` file containing API key (default: `query/.env`)
+- **Output**: Admin account, API key in `query/.env`, database connections, CLI authenticated
+- **Examples**:
   - `python script/setup_metabase.py`
   - `python script/setup_metabase.py --skip-databases`
   - `python script/setup_metabase.py --skip-cli`
@@ -38,17 +38,17 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 ---
 
 ## trigger_dag.py
-- **Mục đích**: Trigger và theo dõi Airflow DAG run qua Airflow CLI (docker exec). Hỗ trợ check status, pause DAG.
-- **Config**: Không cần credentials — chạy CLI trực tiếp trong container `chainslake-onprem-node01-1`
+- **Purpose**: Trigger and monitor Airflow DAG runs via Airflow CLI (docker exec). Supports checking status, pausing DAG.
+- **Config**: No credentials needed — runs CLI directly in `chainslake-onprem-node01-1` container
 - **Input**:
-  - Positional: `dag_id` — Tên DAG (ví dụ `Ethereum`)
-  - `--cancel-all` — Pause DAG và xem runs đang active
-  - `--status` — Xem status các DAG runs gần nhất
-  - `--no-wait` — Trigger rồi thoát ngay
-  - `--poll-interval` — Thời gian poll (giây, mặc định 30)
-  - `--max-wait` — Thời gian chờ tối đa (giây, mặc định 3600)
-- **Output**: Trigger DAG, hiển thị task states real-time, trả exit code 0 nếu success
-- **Ví dụ**:
+  - Positional: `dag_id` — DAG name (e.g., `Ethereum`)
+  - `--cancel-all` — Pause DAG and view active runs
+  - `--status` — View status of recent DAG runs
+  - `--no-wait` — Trigger and exit immediately
+  - `--poll-interval` — Poll interval (seconds, default 30)
+  - `--max-wait` — Maximum wait time (seconds, default 3600)
+- **Output**: Trigger DAG, display real-time task states, return exit code 0 on success
+- **Examples**:
   - `python script/trigger_dag.py Ethereum`
   - `python script/trigger_dag.py Ethereum --status`
   - `python script/trigger_dag.py Ethereum --cancel-all`
@@ -56,19 +56,19 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 ---
 
 ## run_job.py
-- **Mục đích**: Chạy một job pipeline qua docker exec (thay cho việc chạy thủ công `docker exec ...`). Stream output trực tiếp ra terminal, trả về đúng exit code của job. Hỗ trợ liệt kê job có sẵn, dry-run, timeout.
+- **Purpose**: Run a pipeline job via docker exec (instead of manual `docker exec ...`). Streams output directly to terminal, returns the job's actual exit code. Supports listing available jobs, dry-run, timeout.
 - **Input**:
-  - Positional: `job` — job reference, hỗ trợ nhiều format:
-    - `ethereum/extract/blocks.sh` hoặc `ethereum.extract.blocks` — đầy đủ chain/category/job
-    - `extract/blocks --chain ethereum` — category + job, kèm `--chain`
-    - `blocks --chain ethereum` — chỉ tên job, kèm `--chain`
-    - `ethereum/origin` — chain + category (job tự suy nếu category chỉ có 1 file)
-  - `--chain` — tên chain (cần khi job_ref thiếu chain)
-  - `--list` — liệt kê tất cả job scripts có sẵn (tùy chọn kèm `--chain`)
-  - `--dry-run` — chỉ in lệnh docker sẽ chạy, không thực thi
-  - `--timeout <giây>` — kill job nếu chạy quá lâu
-- **Output**: Output của Spark job stream theo thời gian thực, exit code trả về bằng exit code của job
-- **Ví dụ**:
+  - Positional: `job` — job reference, supports multiple formats:
+    - `ethereum/extract/blocks.sh` or `ethereum.extract.blocks` — full chain/category/job
+    - `extract/blocks --chain ethereum` — category + job, with `--chain`
+    - `blocks --chain ethereum` — job name only, with `--chain`
+    - `ethereum/origin` — chain + category (auto-infers if category has only 1 file)
+  - `--chain` — chain name (needed when job_ref is missing chain)
+  - `--list` — list all available job scripts (optionally with `--chain`)
+  - `--dry-run` — only print docker command, don't execute
+  - `--timeout <seconds>` — kill job if running too long
+- **Output**: Spark job output streamed in real-time, exit code matches job's exit code
+- **Examples**:
   - `python script/run_job.py ethereum/extract/blocks.sh`
   - `python script/run_job.py ethereum.extract.blocks`
   - `python script/run_job.py blocks --chain ethereum`
@@ -78,14 +78,14 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 ---
 
 ## build_catalog.py
-- **Mục đích**: Thu thập metadata từ tất cả bảng trong data warehouse và tạo tài liệu catalog markdown (per-table + lineage graph)
-- **Config**: Đọc `METABASE_API_KEY` và `METABASE_URL` từ `query/.env`
+- **Purpose**: Collect metadata from all tables in the data warehouse and generate markdown catalog documentation (per-table + lineage graph)
+- **Config**: Reads `METABASE_API_KEY` and `METABASE_URL` from `query/.env`
 - **Input**:
-  - `--output-dir` — Thư mục output (mặc định: `catalog/`)
-  - `--skip-count` — Bỏ qua đếm số rows (chạy nhanh hơn)
-  - `--skip-example` — Bỏ qua lấy ví dụ dữ liệu
-- **Output**: Thư mục `catalog/` chứa file `[schema].[table].md` cho mỗi bảng + `lineage.md` với Mermaid graph
-- **Ví dụ**:
+  - `--output-dir` — Output directory (default: `catalog/`)
+  - `--skip-count` — Skip row counting (faster)
+  - `--skip-example` — Skip fetching data examples
+- **Output**: `catalog/` directory containing `[schema].[table].md` for each table + `lineage.md` with Mermaid graph
+- **Examples**:
   - `python script/build_catalog.py`
   - `python script/build_catalog.py --skip-count`
   - `python script/build_catalog.py --output-dir /tmp/catalog`
@@ -93,17 +93,15 @@ Thư mục này chứa các Python script do Agent tự viết để phục vụ
 ---
 
 ## build_lineage_from_design.py
-- **Mục đích**: Đọc các file design của Data Architect trong thư mục `docs/<problem>/design/` và sinh `lineage.md` (Mermaid graph + bảng chi tiết) ngay trong thư mục design — ghi rõ bảng nào đã có trong warehouse, bảng nào đang có bản `_dev`, bảng nào cần làm mới
-- **Config**: Query warehouse Spark qua `query/.env` (`METABASE_API_KEY`) để xác định bảng đã tồn tại; dùng `--offline` để thay bằng thư mục catalog
+- **Purpose**: Read Data Architect's design files in `docs/<problem>/design/` directory and generate `lineage.md` (Mermaid graph + detail table) in the design directory — indicating which tables already exist in the warehouse, which have `_dev` versions, and which need to be created from scratch
+- **Config**: Queries warehouse Spark via `query/.env` (`METABASE_API_KEY`) to determine existing tables; use `--offline` to use catalog directory instead
 - **Input**:
-  - Positional: `problem` — tên bài toán (thư mục con của `docs/`, ví dụ `daily_dex_token_volume`)
-  - `--design-dir` — Đường dẫn trực tiếp tới thư mục design (thay thế `problem`)
-  - `--offline` — Không query warehouse, dùng thư mục catalog xác định bảng đã có
-  - `--catalog-dir` — Thư mục catalog dùng khi `--offline` (mặc định: `catalog/`)
-- **Output**: `docs/<problem>/design/lineage.md` — Mermaid graph tô màu theo trạng thái (✅ CÓ / 🔄 DEV / ❌ MỚI), bảng chi tiết kèm trạng thái, danh sách bảng đã có / cần làm mới, root/leaf tables
-- **Ví dụ**:
+  - Positional: `problem` — problem name (subdirectory of `docs/`, e.g., `daily_dex_token_volume`)
+  - `--design-dir` — Direct path to design directory (replaces `problem`)
+  - `--offline` — Don't query warehouse, use catalog directory to determine existing tables
+  - `--catalog-dir` — Catalog directory for `--offline` mode (default: `catalog/`)
+- **Output**: `docs/<problem>/design/lineage.md` — Mermaid graph colored by status (✅ EXISTS / 🔄 DEV / ❌ NEW), detail table with status, list of existing/needs-creation tables, root/leaf tables
+- **Examples**:
   - `python script/build_lineage_from_design.py daily_dex_token_volume`
   - `python script/build_lineage_from_design.py daily_dex_token_volume --offline`
   - `python script/build_lineage_from_design.py --design-dir docs/foo/design`
-
-

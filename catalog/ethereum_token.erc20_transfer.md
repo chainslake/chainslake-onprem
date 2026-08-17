@@ -1,14 +1,14 @@
 # ethereum_token.erc20_transfer
 
-## Trạng thái
+## Status
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngày tạo | 2026-07-12 15:54:30 |
-| Ngày update gần nhất | 2026-07-26 16:58:38 |
-| Số bản ghi | 599356 |
-| Số file | 8 |
-| Dung lượng | 44.2 MB |
+| Created date | 2026-07-12 15:54:30 |
+| Last updated | 2026-07-26 16:58:38 |
+| Row count | 599356 |
+| File count | 8 |
+| Size | 44.2 MB |
 | frequentType | block |
 | fromBlock | 25516917 |
 | toBlock | 25518120 |
