@@ -29,7 +29,7 @@
     },
 
     "team-lead": {
-      "description": "Điều phối Data Team — giao task, theo dõi, tổng hợp kết quả",
+      "description": "Điều phối Data Team — giao task, theo dõi, tổng hợp kết quả. READ-ONLY: không edit/exec ngoài docs/",
       "mode": "primary",
       "prompt": "{file:.opencode/agents/team-lead.md}",
       "model": "opencode/big-pickle",
@@ -49,15 +49,32 @@
         },
         "read": {
           "*": "deny",
-          "docs/**": "allow"
+          "docs/**": "allow",
+          ".opencode/agents/*.md": "allow",
+          ".opencode/skills/*/SKILL.md": "allow",
+          "catalog/**": "allow",
+          "query/README.md": "allow",
+          "script/index.md": "allow",
+          "README.md": "allow",
+          "AGENTS.md": "allow",
+          "AGENT_INSTRUCTION.md": "allow",
+          "guide_book.md": "allow",
+          "CODING_CONVENTIONS.md": "allow",
+          "opencode.json": "allow"
         },
         "glob": {
           "*": "deny",
-          "docs/**": "allow"
+          "docs/**": "allow",
+          ".opencode/agents/*.md": "allow",
+          ".opencode/skills/*/SKILL.md": "allow",
+          "catalog/**": "allow"
         },
         "grep": {
           "*": "deny",
-          "docs/**": "allow"
+          "docs/**": "allow",
+          ".opencode/agents/*.md": "allow",
+          ".opencode/skills/*/SKILL.md": "allow",
+          "catalog/**": "allow"
         }
       }
     },
