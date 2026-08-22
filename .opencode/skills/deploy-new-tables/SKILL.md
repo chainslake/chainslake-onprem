@@ -12,15 +12,15 @@ Guide to deploying tables/jobs that have completed the DEV-TEST loop from `_dev`
 
 - Problem folder `docs/<problem-name>/` has completed the DEV-TEST loop:
   - `design/` — design from Data Architect
-  - `development.md` — job information from Developer
+  - `development.md` — job information from Data Engineer
   - `test/` — test cases that PASSED from Tester
-- Tables have been developed with `_dev` suffix (created by Developer)
+- Tables have been developed with `_dev` suffix (created by Data Engineer)
 
 ## Input
 
 - Problem folder `docs/<problem-name>/` — completed DEV-TEST loop:
   - `design/` — design from Data Architect
-  - `development.md` — job information from Developer (list of developed jobs, input/output _dev tables, job run scripts)
+  - `development.md` — job information from Data Engineer (list of developed jobs, input/output _dev tables, job run scripts)
   - `test/` — test cases that PASSED from Tester
 
 ## Background Knowledge
@@ -76,7 +76,7 @@ python query/drop_table.py <schema>.<table>_dev
 - Configure job in `.sh` to run 5 days of data (instead of all).
 - Trigger manually following the **lineage order** designed by the Architect (read lineage from `design/`: upstream must run before downstream).
 - **Resource shortage** error → adjust: reduce `max_number_partition` + increase `max_time_run`.
-- **Logic** error → return to team-lead for Developer to handle.
+- **Logic** error → return to team-lead for Data Engineer to handle.
 - After completion, collect:
   - Run time
   - Data range processed (from-to)
@@ -102,9 +102,9 @@ python query/drop_table.py <schema>.<table>_dev
 - **Do NOT drop old tables when updating**: only update properties, don't drop production tables that have data
 - **Reset properties with correct run_mode**: `backward` → set `fromBlock = toBlock+1`; `forward` → set `toBlock = fromBlock-1` (setting opposite will process wrong range)
 - **Run in lineage order**: upstream must finish before downstream, otherwise downstream jobs won't have data to process
-- **Resource shortage ≠ logic error**: reduce `max_number_partition` + increase `max_time_run` for RAM/thread issues; logic errors go back to Developer
+- **Resource shortage ≠ logic error**: reduce `max_number_partition` + increase `max_time_run` for RAM/thread issues; logic errors go back to Data Engineer
 - **DAG deployment doesn't need docker**: `chainslake/` is already mounted in the container, just write files to `chainslake/airflow/dags/<chain>.py`
 
 ## Real-world Example
 
-- Problem daily_dex_token_volume: after Developer completed `_dev` jobs and Tester PASSED, DataOps removed `_dev`, reset properties according to design (`backward`), created UAT.md, ran 5-day trial following lineage, then added jobs to `chainslake/airflow/dags/ethereum.py`.
+- Problem daily_dex_token_volume: after Data Engineer completed `_dev` jobs and Tester PASSED, the deploy step removed `_dev`, reset properties according to design (`backward`), created UAT.md, ran 5-day trial following lineage, then added jobs to `chainslake/airflow/dags/ethereum.py`.

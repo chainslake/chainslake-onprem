@@ -565,3 +565,7 @@ Vì đây là prompt chung cho các Agent nên tôi muốn nó phải thật ng�
     - Luật chung cho tất cả các Agent, ví dụ:
         - Bạn sẽ được cấp phép sử dụng các skill, tool (script, query), tài liệu đi kèm và không gian làm việc với quyền hạn xác định 
         - Bám sát nhiệm vụ được giao, sử dụng skill, hướng dẫn và tool được cấp phép để thực hiện nhiệm vụ
+
+===
+
+Hiện tại tôi thấy rằng vai trò của của dataops và developer trong 1 số trường hợp bị chồng lấn lẫn nhau, vì vậy tôi muốn gộp 2 agent này thành 1 agent tên là data-engineer. Agent data-engineer sẽ có đầy đủ các skill và quyền như dataops và developer, quy trình hiện tại của developer trong việc phát triển job mới sẽ được viết lại thành 1 skill cho agent data-engineer. Các quy trình như add contract decoded, add contract info, add new chain pipeline đã có skill rồi thì không cần đi qua quy trình phát triển phực tạp (từ BA -> Architect -> dev -> test) mà data-engineer có thể thực hiện ngay theo skill 

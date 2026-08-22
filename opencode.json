@@ -163,17 +163,19 @@
       }
     },
 
-    "developer": {
-      "description": "Developer — viết .sh/.sql/ABI, chạy test qua Docker, _dev suffix",
+    "data-engineer": {
+      "description": "Data Engineer — phát triển job (.sh/.sql/ABI), test trên _dev, triển khai production, UAT, quản lý DAG, setup chain mới",
       "mode": "subagent",
-      "prompt": "{file:.opencode/agents/developer.md}",
+      "prompt": "{file:.opencode/agents/data-engineer.md}",
       "model": "opencode/big-pickle",
-      "color": "#2ECC71",
+      "color": "#16A085",
       "temperature": 0.2,
       "permission": {
         "read": {
           "*": "deny",
           "chainslake/**": "allow",
+          "chainslake-run/**": "allow",
+          "docker/**": "allow",
           "docs/**": "allow",
           "template/**": "allow",
           "guide_book.md": "allow",
@@ -184,6 +186,8 @@
         "glob": {
           "*": "deny",
           "chainslake/**": "allow",
+          "chainslake-run/**": "allow",
+          "docker/**": "allow",
           "docs/**": "allow",
           "template/**": "allow",
           "script/**": "allow",
@@ -192,6 +196,8 @@
         "grep": {
           "*": "deny",
           "chainslake/**": "allow",
+          "chainslake-run/**": "allow",
+          "docker/**": "allow",
           "docs/**": "allow",
           "template/**": "allow",
           "script/**": "allow",
@@ -200,6 +206,8 @@
         "list": {
           "*": "deny",
           "chainslake/**": "allow",
+          "chainslake-run/**": "allow",
+          "docker/**": "allow",
           "docs/**": "allow",
           "template/**": "allow",
           "script/**": "allow",
@@ -208,26 +216,38 @@
         "edit": {
           "*": "deny",
           "chainslake/**": "allow",
+          "chainslake-run/**": "allow",
           "docs/*/design/*": "allow",
-          "docs/*/development.md": "allow"
+          "docs/*/development.md": "allow",
+          "docs/*/UAT.md": "allow"
         },
         "bash": {
           "*": "deny",
           "python query/*": "allow",
           "python script/*": "allow",
+          "docker *": "allow",
+          "chmod +x chainslake/jobs/*/*.sh": "allow",
+          "chmod +x chainslake/jobs/*/**/*.sh": "allow",
           "* > script/*": "deny",
           "* >> script/*": "deny",
           "* > query/*": "deny",
           "* >> query/*": "deny",
+          "* > .opencode/skills/*": "deny",
+          "* >> .opencode/skills/*": "deny",
+          "* > opencode.json*": "deny",
+          "* >> opencode.json*": "deny",
           "touch script/*": "deny",
           "touch query/*": "deny",
           "touch .opencode/skills/*": "deny",
           "mkdir script/*": "deny",
           "mkdir query/*": "deny",
+          "mkdir .opencode/skills/*": "deny",
           "cp * script/*": "deny",
           "cp * query/*": "deny",
+          "cp * .opencode/skills/*": "deny",
           "mv * script/*": "deny",
-          "mv * query/*": "deny"
+          "mv * query/*": "deny",
+          "mv * .opencode/skills/*": "deny"
         },
         "skill": "allow"
       }
@@ -279,87 +299,6 @@
           "python query/*": "allow",
           "python script/*": "allow"
         }
-      }
-    },
-
-    "dataops": {
-      "description": "DataOps — cấu hình job, triển khai bảng mới, chạy UAT, monitor, quản lý DAG",
-      "mode": "subagent",
-      "prompt": "{file:.opencode/agents/dataops.md}",
-      "model": "opencode/big-pickle",
-      "color": "#1ABC9C",
-      "temperature": 0.2,
-      "permission": {
-        "read": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "guide_book.md": "allow",
-          "CODING_CONVENTIONS.md": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "list": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "edit": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "docs/*/UAT.md": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "python query/*": "allow",
-          "python script/*": "allow",
-          "docker *": "allow",
-          "* > script/*": "deny",
-          "* >> script/*": "deny",
-          "* > query/*": "deny",
-          "* >> query/*": "deny",
-          "* > .opencode/skills/*": "deny",
-          "* >> .opencode/skills/*": "deny",
-          "* > opencode.json*": "deny",
-          "* >> opencode.json*": "deny",
-          "touch script/*": "deny",
-          "touch query/*": "deny",
-          "touch .opencode/skills/*": "deny",
-          "mkdir script/*": "deny",
-          "mkdir query/*": "deny",
-          "mkdir .opencode/skills/*": "deny",
-          "cp * script/*": "deny",
-          "cp * query/*": "deny",
-          "cp * .opencode/skills/*": "deny",
-          "mv * script/*": "deny",
-          "mv * query/*": "deny",
-          "mv * .opencode/skills/*": "deny"
-        },
-        "skill": "allow"
       }
     },
 
