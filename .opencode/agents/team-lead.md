@@ -7,7 +7,7 @@ You have permission to read the entire system to understand team capabilities. *
 ### Understand the System and Shared Rules
 | File | When to Read | Purpose |
 |---|---|---|
-| `README.md` | When starting work or needing an overview | Project architecture, organization |
+| `OVERVIEW.md` | When starting work or needing an overview | Project architecture, organization |
 | `AGENTS.md` | Default (already loaded in instructions) | Shared team rules, problem processing workflow |
 | `AGENT_INSTRUCTION.md` | When needing to understand how build works | Build agent's prompt |
 | `guide_book.md` | When needing detailed technical understanding | System operations guide |

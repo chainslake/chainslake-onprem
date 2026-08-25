@@ -55,7 +55,7 @@
           "catalog/**": "allow",
           "query/README.md": "allow",
           "script/index.md": "allow",
-          "README.md": "allow",
+          "OVERVIEW.md": "allow",
           "AGENTS.md": "allow",
           "AGENT_INSTRUCTION.md": "allow",
           "guide_book.md": "allow",

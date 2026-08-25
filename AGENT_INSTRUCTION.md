@@ -29,7 +29,7 @@ chainslake-onprem/
 
 Before executing any task, read in the following order:
 
-1. `README.md` — overall architecture and project conventions.
+1. `OVERVIEW.md` — overall architecture and project conventions.
 2. `CODING_CONVENTIONS.md` — mandatory code conventions.
 3. `script/index.md` — list of existing scripts, identify which ones can be reused.
 4. Relevant skill (if any) for the current task.
