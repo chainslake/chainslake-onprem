@@ -9,6 +9,8 @@ Usage:
     python script/trigger_dag.py Ethereum --cancel-all
     python script/trigger_dag.py Ethereum --status
     python script/trigger_dag.py Ethereum --no-wait
+    python script/trigger_dag.py --backfill-task BNB bnb_origin.transaction_blocks 2025-10-11
+    python script/trigger_dag.py --backfill-dag BNB 2025-10-11 2025-11-11 --run-backwards
 """
 
 import argparse
@@ -38,6 +40,43 @@ def run_airflow_cmd(args, timeout=30):
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     return result.stdout.strip(), result.returncode
+
+
+def run_airflow_cmd_stream(args, timeout=3600):
+    """Run airflow CLI inside container, stream output in real-time.
+
+    Used for long-running commands (backfill) where capturing all output
+    in memory is not desirable and the agent should see progress.
+    """
+    cmd = [
+        "docker", "exec", "-u", AIRFLOW_USER, CONTAINER,
+        "bash", "-c",
+        f"{_AIRFLOW_ENV} && airflow {args}"
+    ]
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+    except FileNotFoundError:
+        print("Error: 'docker' not found on host.")
+        return 1
+
+    try:
+        for line in proc.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        print("\nInterrupted, killing command...")
+        proc.kill()
+        proc.wait()
+        return 130
+
+    rc = proc.wait()
+    return rc
 
 
 def run_host_cmd(cmd, timeout=30):
@@ -234,6 +273,31 @@ def trigger_and_monitor(dag_id, poll_interval=30, max_wait=3600):
     return "timeout"
 
 
+def backfill_task(dag_id, task_id, execution_date):
+    """Run a single Airflow task instance (backfill one task).
+
+    Replaces manual `docker exec ... airflow tasks run <DAG_ID> <TASK_ID> <DATE>`.
+    Execution date format: YYYY-MM-DD (e.g. 2025-10-11).
+    """
+    print(f"Running task backfill: {dag_id} / {task_id} @ {execution_date}")
+    rc = run_airflow_cmd_stream(f"tasks run {dag_id} {task_id} {execution_date}")
+    return rc
+
+
+def backfill_dag(dag_id, start_date, end_date, run_backwards=False):
+    """Backfill an entire DAG from start_date to end_date.
+
+    Replaces manual `docker exec ... airflow dags backfill -s <start> -e <end> <DAG_ID>`.
+    With --run-backwards, processes from end_date back to start_date.
+    """
+    cmd = f"dags backfill -s {start_date} -e {end_date} {dag_id}"
+    if run_backwards:
+        cmd += " --run-backwards"
+    print(f"Running DAG backfill: {cmd}")
+    rc = run_airflow_cmd_stream(cmd)
+    return rc
+
+
 def main():
     parser = argparse.ArgumentParser(description="Trigger and monitor Airflow DAG (via CLI)")
     parser.add_argument("dag_id", help="DAG ID (e.g. Ethereum)")
@@ -242,6 +306,12 @@ def main():
     parser.add_argument("--no-wait", action="store_true", help="Trigger and exit immediately")
     parser.add_argument("--poll-interval", type=int, default=30, help="Poll interval in seconds")
     parser.add_argument("--max-wait", type=int, default=3600, help="Max wait time in seconds")
+    parser.add_argument("--backfill-task", nargs=3, metavar=("DAG_ID", "TASK_ID", "EXECUTION_DATE"),
+                        help="Run a single task instance (backfill one task), e.g. --backfill-task BNB bnb_origin.transaction_blocks 2025-10-11")
+    parser.add_argument("--backfill-dag", nargs=3, metavar=("DAG_ID", "START_DATE", "END_DATE"),
+                        help="Backfill an entire DAG from START_DATE to END_DATE, e.g. --backfill-dag BNB 2025-10-11 2025-11-11")
+    parser.add_argument("--run-backwards", action="store_true",
+                        help="With --backfill-dag: process from end_date back to start_date")
     args = parser.parse_args()
 
     # Check if container is running
@@ -250,7 +320,12 @@ def main():
         print(f"Error: Container '{CONTAINER}' is not running.")
         sys.exit(1)
 
-    if args.cancel_all:
+    if args.backfill_task:
+        sys.exit(backfill_task(*args.backfill_task))
+    elif args.backfill_dag:
+        dag_id, start_date, end_date = args.backfill_dag
+        sys.exit(backfill_dag(dag_id, start_date, end_date, args.run_backwards))
+    elif args.cancel_all:
         cancel_all_runs(args.dag_id)
     elif args.status:
         show_status(args.dag_id)

@@ -105,13 +105,7 @@ Access `http://localhost:58080`
 Get the password:
 
 ```bash
-cat docker/home/projects/chainslake/airflow/standalone_admin_password.txt
-```
-
-Or via container:
-
-```bash
-docker exec chainslake-onprem-node01-1 cat /home/hadoop/projects/chainslake/airflow/standalone_admin_password.txt
+cat chainslake/airflow/standalone_admin_password.txt
 ```
 
 > This file only appears after Airflow finishes its first startup. If not present, wait another 1-2 minutes.
@@ -170,5 +164,5 @@ docker compose logs -f node01   # view logs
 | Issue | Solution |
 |---|---|
 | Supervisord missing RUNNING services | Wait 2-3 minutes after `docker compose up -d`, refresh again |
-| Missing `standalone_admin_password.txt` | `docker exec chainslake-onprem-node01-1 tail -50 /tmp/airflow.log` — wait for Airflow to finish starting |
+| Missing `standalone_admin_password.txt` | Check Supervisord (port 59001) → `airflow` service must be RUNNING; view Airflow startup log with `docker compose logs node01` — wait for Airflow to finish starting |
 | Metabase can't connect to SparkSQL | Check Spark Thrift Server on Supervisord, restart if not RUNNING |

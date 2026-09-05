@@ -38,7 +38,7 @@ This directory contains Python scripts written by Agents to serve repetitive tas
 ---
 
 ## trigger_dag.py
-- **Purpose**: Trigger and monitor Airflow DAG runs via Airflow CLI (docker exec). Supports checking status, pausing DAG.
+- **Purpose**: Trigger and monitor Airflow DAG runs via Airflow CLI (docker exec). Supports checking status, pausing DAG, and backfilling tasks / entire DAGs.
 - **Config**: No credentials needed — runs CLI directly in `chainslake-onprem-node01-1` container
 - **Input**:
   - Positional: `dag_id` — DAG name (e.g., `Ethereum`)
@@ -47,11 +47,29 @@ This directory contains Python scripts written by Agents to serve repetitive tas
   - `--no-wait` — Trigger and exit immediately
   - `--poll-interval` — Poll interval (seconds, default 30)
   - `--max-wait` — Maximum wait time (seconds, default 3600)
+  - `--backfill-task DAG_ID TASK_ID EXECUTION_DATE` — Run a single task instance (backfill one task)
+  - `--backfill-dag DAG_ID START_DATE END_DATE [--run-backwards]` — Backfill an entire DAG
 - **Output**: Trigger DAG, display real-time task states, return exit code 0 on success
 - **Examples**:
   - `python script/trigger_dag.py Ethereum`
   - `python script/trigger_dag.py Ethereum --status`
   - `python script/trigger_dag.py Ethereum --cancel-all`
+  - `python script/trigger_dag.py --backfill-task BNB bnb_origin.transaction_blocks 2025-10-11`
+  - `python script/trigger_dag.py --backfill-dag BNB 2025-10-11 2025-11-11 --run-backwards`
+
+---
+
+## upload_hdfs.py
+- **Purpose**: Upload CSV files from local `chainslake/ext_upload/` to HDFS — creates the target HDFS directory if needed and puts the file (wraps `docker exec` + `hdfs dfs` internally)
+- **Input**:
+  - Positional 1: `schema_table` — target table `<schema>.<table>` (e.g., `ext_upload.eth_etf_address`)
+  - Positional 2: `file_name` — CSV file name inside `chainslake/ext_upload/` (e.g., `eth_etf_address.csv`)
+  - `--no-mkdir` — Skip creating the HDFS directory
+  - `--dry-run` — Print the docker command without executing
+- **Output**: Streams `hdfs dfs` output, returns exit code 0 on success
+- **Examples**:
+  - `python script/upload_hdfs.py ext_upload eth_etf_address.csv`
+  - `python script/upload_hdfs.py ext_upload eth_etf_address.csv --dry-run`
 
 ---
 

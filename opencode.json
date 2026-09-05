@@ -219,13 +219,23 @@
           "chainslake-run/**": "allow",
           "docs/*/design/*": "allow",
           "docs/*/development.md": "allow",
-          "docs/*/UAT.md": "allow"
+          "docs/*/UAT.md": "allow",
+          "script/.env": "allow"
         },
         "bash": {
           "*": "deny",
           "python query/*": "allow",
           "python script/*": "allow",
-          "docker *": "allow",
+          "curl *": "allow",
+          "docker ps": "allow",
+          "docker ps *": "allow",
+          "docker compose up": "allow",
+          "docker compose up *": "allow",
+          "docker compose down": "allow",
+          "docker compose down *": "allow",
+          "docker compose ps": "allow",
+          "docker compose ps *": "allow",
+          "docker compose logs *": "allow",
           "chmod +x chainslake/jobs/*/*.sh": "allow",
           "chmod +x chainslake/jobs/*/**/*.sh": "allow",
           "* > script/*": "deny",
@@ -247,7 +257,12 @@
           "cp * .opencode/skills/*": "deny",
           "mv * script/*": "deny",
           "mv * query/*": "deny",
-          "mv * .opencode/skills/*": "deny"
+          "mv * .opencode/skills/*": "deny",
+          "cd docker": "allow",
+          "cp env_example .env": "allow",
+          "bash init_dir.sh": "allow",
+          "cat chainslake/airflow/standalone_admin_password.txt": "allow",
+          "cp script/env_example script/.env": "allow"
         },
         "skill": "allow"
       }
@@ -352,6 +367,39 @@
           "python script/*": "allow",
           "mb *": "allow"
         },
+        "skill": "allow"
+      }
+    },
+
+    "writer": {
+      "description": "Technical Writer — viết bài viết kỹ thuật, chia sẻ kiến thức về dự án Chainslake. Agent độc lập, chỉ kích hoạt bởi User, đọc toàn bộ file markdown của dự án",
+      "mode": "primary",
+      "prompt": "{file:.opencode/agents/writer.md}",
+      "model": "opencode/big-pickle",
+      "color": "#2C3E50",
+      "temperature": 0.6,
+      "permission": {
+        "read": {
+          "**/*.md": "allow",
+          "*": "deny"
+        },
+        "glob": {
+          "**/*.md": "allow",
+          "*": "deny"
+        },
+        "grep": {
+          "**/*.md": "allow",
+          "*": "deny"
+        },
+        "list": {
+          "**/*.md": "allow",
+          "*": "deny"
+        },
+        "edit": {
+          "*": "deny",
+          "blog/**": "allow"
+        },
+        "bash": "deny",
         "skill": "allow"
       }
     }

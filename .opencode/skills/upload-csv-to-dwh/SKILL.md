@@ -22,11 +22,21 @@ python query/ddl_spark.py "CREATE SCHEMA IF NOT EXISTS <schema_name>"
 
 ### Step 2: Upload File to HDFS
 
+Use the upload helper (wraps `docker exec` + `hdfs dfs` internally — do NOT call `docker exec` directly):
+
 ```bash
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-  "export PS1='something' && source /etc/bash.bashrc && \
-   hdfs dfs -mkdir -p /user/hive/warehouse/<schema_name>.db/<table_name> && \
-   hdfs dfs -put /home/hadoop/projects/chainslake/ext_upload/<file_name>.csv /user/hive/warehouse/<schema_name>.db/<table_name>/"
+python script/upload_hdfs.py <schema_name>.<table_name> <file_name>.csv
+```
+
+This creates the HDFS directory if it does not exist, then puts the CSV file into it.
+
+Options:
+```bash
+# Skip creating the directory (already exists)
+python script/upload_hdfs.py <schema_name>.<table_name> <file_name>.csv --no-mkdir
+
+# Print the docker command without executing
+python script/upload_hdfs.py <schema_name>.<table_name> <file_name>.csv --dry-run
 ```
 
 ### Step 3: Create External Table

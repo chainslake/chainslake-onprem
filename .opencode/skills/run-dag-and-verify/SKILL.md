@@ -84,7 +84,7 @@ decoded.erc20_evt_transfer → contract.erc20_tokens
 ## Notes / Gotchas
 
 ### Airflow CLI
-The script uses `docker exec` to call `airflow` CLI inside the `chainslake-onprem-node01-1` container.
+`trigger_dag.py` uses `docker exec` internally to call the `airflow` CLI inside the `chainslake-onprem-node01-1` container — you do **NOT** need to run `docker exec` yourself.
 - Container must be running (`docker ps | grep node01`)
 - Execution user: `hadoop`
 - No HTTP auth or credentials needed — CLI uses automatic local auth

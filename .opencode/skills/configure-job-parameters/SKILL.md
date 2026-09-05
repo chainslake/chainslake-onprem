@@ -274,26 +274,25 @@ $CHAINSLAKE_RUN_DIR/chainslake-run.sh ... \
 
 When the DAG has finished backfilling historical data, newly added jobs **must backfill themselves** to get historical data.
 
-#### Using Airflow CLI
+#### Using the DAG Tool (recommended — no `docker exec` needed)
+
+Use `trigger_dag.py` which wraps the Airflow CLI (docker exec handled internally):
 
 ```bash
 # Backfill a specific task
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-    "export PS1='something' && source /etc/bash.bashrc && \
-     airflow tasks run <DAG_ID> <TASK_ID> <EXECUTION_DATE> --run-backwards"
+python script/trigger_dag.py --backfill-task <DAG_ID> <TASK_ID> <EXECUTION_DATE>
 
 # Example: Backfill task bnb_origin.transaction_blocks from 2025-10-11
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-    "export PS1='something' && source /etc/bash.bashrc && \
-     airflow tasks run BNB bnb_origin.transaction_blocks 2025-10-11 --run-backwards"
+python script/trigger_dag.py --backfill-task BNB bnb_origin.transaction_blocks 2025-10-11
 ```
 
 #### Backfill Entire DAG (if needed)
 
 ```bash
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-    "export PS1='something' && source /etc/bash.bashrc && \
-     airflow dags backfill -s 2025-10-11 -e <end_date> <DAG_ID>"
+python script/trigger_dag.py --backfill-dag <DAG_ID> <START_DATE> <END_DATE> [--run-backwards]
+
+# Example: Backfill BNB DAG from 2025-10-11 to 2025-11-11, running backward
+python script/trigger_dag.py --backfill-dag BNB 2025-10-11 2025-11-11 --run-backwards
 ```
 
 **Notes**:
@@ -354,9 +353,7 @@ Suppose adding `bnb.extract.new_table.sh`:
 2. Add task to `bnb.py` DAG
 3. Backfill the new task only:
 ```bash
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-    "export PS1='something' && source /etc/bash.bashrc && \
-     airflow tasks run BNB bnb.new_table 2025-10-11 --run-backwards"
+python script/trigger_dag.py --backfill-task BNB bnb.new_table 2025-10-11
 ```
 
 ## Notes / Gotchas

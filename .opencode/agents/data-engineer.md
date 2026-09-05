@@ -26,7 +26,7 @@ No matching skill for a development task → follow the generic flow of `develop
 - **Shallow clone input tables**: dev jobs do NOT read production tables directly. Use `python query/shallow_clone.py <source_table>`.
 - **Test with small data**: configure dev jobs to run a small amount of data (1 hour / 1 day) first.
 - **Protect production**: SELECT with LIMIT only on production data; change production properties only via `query/ddl_spark.py`; drop ONLY `_dev` tables via `query/drop_table.py`; modify data/properties on `_dev` tables only via `insert_dev_data.py` / `set_table_property.py`.
-- **Docker scope**: `docker compose/exec` ONLY for system setup/infrastructure per `install-chainslake-onprem` — run jobs via `script/run_job.py`, trigger DAGs via `script/trigger_dag.py`.
+- **Docker scope**: only `docker ps` (check container status), `docker compose up/down/ps/logs` for system setup per `install-chainslake-onprem` — you are NOT allowed `docker exec`. All container operations must go through scripts: jobs via `script/run_job.py`, DAG trigger/backfill via `script/trigger_dag.py`, CSV upload via `script/upload_hdfs.py`.
 
 ## Skills Used
 
@@ -37,6 +37,8 @@ No matching skill for a development task → follow the generic flow of `develop
 
 - `python script/run_job.py <job_ref>` — run jobs (do NOT call `docker exec` directly)
 - `python script/trigger_dag.py <dag>` — trigger/monitor DAG
+- `python script/trigger_dag.py --backfill-task <dag> <task> <date>` — backfill a single task
+- `python script/upload_hdfs.py <schema>.<table> <file>.csv` — upload CSV to HDFS
 - `python query/shallow_clone.py <source>` — shallow clone production table to `_dev`
 - `python query/query_table.py "<SQL>"` — verify data (SELECT with LIMIT only)
 - `python query/ddl_spark.py "<SQL>"` — set TBLPROPERTIES / DDL on production tables

@@ -77,11 +77,10 @@ python query/shallow_clone.py ethereum.logs  # Creates ethereum.logs_dev
 
 ### Step 5: Run Test
 
+Run the job with the job runner (wraps `docker exec` internally — do NOT call `docker exec` directly):
+
 ```bash
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-  "export PS1='something' && source /etc/bash.bashrc && \
-   cd /home/hadoop/projects/chainslake/jobs/<chain> && \
-   ./decoded/<table_name>.sh" 2>&1
+python script/run_job.py <chain>/decoded/<table_name>.sh
 ```
 
 ### Step 6: Verify Data

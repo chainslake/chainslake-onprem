@@ -144,11 +144,10 @@ export $(cat $CHAINSLAKE_RUN_DIR/.env) && $CHAINSLAKE_RUN_DIR/chainslake-run.sh 
 
 For dev: create `evm_contract/<job>_dev.sql` outputting to `${chain_name}_contract.<output_table>_dev`, and `.sh` pointing to `_dev.sql` file.
 
+Run the job with the job runner (wraps `docker exec` internally — do NOT call `docker exec` directly):
+
 ```bash
-docker exec -u hadoop chainslake-onprem-node01-1 bash -c \
-  "export PS1='something' && source /etc/bash.bashrc && \
-   cd /home/hadoop/projects/chainslake/jobs/<chain> && \
-   ./contract/<table_name>.sh" 2>&1
+python script/run_job.py <chain>/contract/<table_name>.sh
 ```
 
 ### Step 5: Verify Data
