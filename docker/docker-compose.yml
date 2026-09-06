@@ -35,7 +35,6 @@ services:
       CHAINSLAKE_HOME_DIR: ${CHAINSLAKE_HOME_DIR}
       CHAINSLAKE_RUN_DIR: ${CHAINSLAKE_RUN_DIR}
     volumes:
-      - ./home:/home/hadoop
       - ../chainslake:/home/hadoop/projects/chainslake
       - ../chainslake-run:/home/hadoop/projects/chainslake-run
       - ${NODE01_DATA_DIR}:/hadoop_data

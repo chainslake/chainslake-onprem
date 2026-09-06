@@ -260,7 +260,7 @@
           "mv * .opencode/skills/*": "deny",
           "cd docker": "allow",
           "cp env_example .env": "allow",
-          "bash init_dir.sh": "allow",
+          "bash download_lib.sh": "allow",
           "cat chainslake/airflow/standalone_admin_password.txt": "allow",
           "cp script/env_example script/.env": "allow"
         },

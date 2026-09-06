@@ -49,28 +49,30 @@ CHAINSLAKE_HOME_DIR=/home/hadoop/projects/chainslake
 CHAINSLAKE_RUN_DIR=/home/hadoop/projects/chainslake-run
 ```
 
-## Step 2: Initialize System Directories
+## Step 2: Prepare Metabase Driver
 
 ```bash
-bash init_dir.sh
+bash download_lib.sh
 ```
 
 Script performs:
-1. Starts temporary container `lakechain/chainslake` → copies `/home/hadoop` to `docker/home/`
-2. Creates `hadoop_data_node01/` and `hadoop_data_node02/`
+1. Creates `libs/`
+2. Downloads the Starburst Metabase driver JAR from GitHub — required for Metabase to connect to Trino
+
+The data directories `hadoop_data_node01/`, `hadoop_data_node02/` and `postgres_data/` are auto-created by Docker Compose on first start.
 
 Result:
 
 ```
 docker/
-├── home/                    # mounted into node01
-├── hadoop_data_node01/
-├── hadoop_data_node02/
-├── postgres_data/
-├── etc/
+├── hadoop_data_node01/      # HDFS data for node01 (auto-created by Docker)
+├── hadoop_data_node02/      # HDFS data for node02 (auto-created by Docker)
+├── libs/                    # Metabase JDBC driver (created by download_lib.sh)
+├── postgres_data/           # PostgreSQL data (auto-created if not present)
+├── etc/                     # Service configuration files
 ├── docker-compose.yml
 ├── .env
-└── init_dir.sh
+└── download_lib.sh
 ```
 
 ## Step 3: Start Services
