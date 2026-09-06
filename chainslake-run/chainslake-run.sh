@@ -1,5 +1,5 @@
-spark-submit --master local[2] \
-    --driver-memory 4g \
+spark-submit --master local[4] \
+    --driver-memory 20g \
     --deploy-mode client \
     "$@" \
     --conf "spark.app_properties.chainslake_home_dir=$CHAINSLAKE_HOME_DIR" \
