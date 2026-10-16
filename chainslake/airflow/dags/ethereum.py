@@ -23,8 +23,7 @@ with DAG(
     # schedule="@once",
     max_active_runs=1,
     max_active_tasks=10,
-    is_paused_upon_creation=True,
-    catchup=False,
+    is_paused_upon_creation=True
 ) as dag:
 
     ########################### ORIGIN ##########################################
@@ -41,7 +40,12 @@ with DAG(
         bash_command=f"cd {RUN_DIR} && ./origin/blocks_receipt.sh "
     )
 
-    ethereum_origin_transaction_blocks >> ethereum_origin_blocks_receipt
+    ethereum_origin_traces = BashOperator(
+        task_id="ethereum_origin.traces",
+        bash_command=f"cd {RUN_DIR} && ./origin/traces.sh "
+    )
+
+    ethereum_origin_transaction_blocks >> [ethereum_origin_blocks_receipt, ethereum_origin_traces]
 
     ############################################## EXTRACT #############################
 
@@ -50,7 +54,7 @@ with DAG(
         bash_command=f"cd {RUN_DIR} && ./extract/blocks.sh "
     )
 
-    ethereum_origin_blocks_receipt >> ethereum_blocks
+    [ethereum_origin_blocks_receipt, ethereum_origin_traces] >> ethereum_blocks
 
     ethereum_logs = BashOperator(
         task_id="ethereum.logs",
@@ -64,6 +68,21 @@ with DAG(
 
     ethereum_origin_blocks_receipt >> [ethereum_transactions, ethereum_logs]
 
+    ethereum_traces = BashOperator(
+        task_id="ethereum.traces",
+        bash_command=f"cd {RUN_DIR} && ./extract/traces.sh "
+    )
+
+    [ethereum_origin_traces, ethereum_transactions] >> ethereum_traces
+
+    ############################################# Address ###########################################
+
+    ethereum_address_creator = BashOperator(
+        task_id="ethereum_address.creator",
+        bash_command=f"cd {RUN_DIR} && ./address/creator.sh "
+    )
+
+    [ethereum_transactions, ethereum_traces] >> ethereum_address_creator
 
     ############################################# DECODED ###########################################
 
@@ -76,21 +95,21 @@ with DAG(
 
     ############################################# Contract ###########################################
 
-    ethereum_contract_erc20_tokens = BashOperator(
-        task_id="ethereum_contract.erc20_tokens",
-        bash_command=f"cd {RUN_DIR} && ./contract/erc20_tokens.sh "
-    )
+    # ethereum_contract_erc20_tokens = BashOperator(
+    #     task_id="ethereum_contract.erc20_tokens",
+    #     bash_command=f"cd {RUN_DIR} && ./contract/erc20_tokens.sh "
+    # )
 
-    ethereum_decoded_erc20_evt_transfer >> ethereum_contract_erc20_tokens
+    # ethereum_decoded_erc20_evt_transfer >> ethereum_contract_erc20_tokens
 
     ############################################# TOKEN ###########################################
 
-    ethereum_token_erc20_transfer = BashOperator(
-        task_id="ethereum_token.erc20_transfer",
-        bash_command=f"cd {RUN_DIR} && ./token/erc20_transfer.sh "
-    )
+    # ethereum_token_erc20_transfer = BashOperator(
+    #     task_id="ethereum_token.erc20_transfer",
+    #     bash_command=f"cd {RUN_DIR} && ./token/erc20_transfer.sh "
+    # )
 
-    [ethereum_transactions, ethereum_decoded_erc20_evt_transfer] >> ethereum_token_erc20_transfer
-    ethereum_contract_erc20_tokens >> ethereum_token_erc20_transfer
+    # [ethereum_transactions, ethereum_decoded_erc20_evt_transfer] >> ethereum_token_erc20_transfer
+    # ethereum_contract_erc20_tokens >> ethereum_token_erc20_transfer
 
 

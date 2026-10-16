@@ -10,7 +10,7 @@ Guide to creating a complete data pipeline for a new EVM-compatible blockchain i
 
 ## When to Use
 - When the user wants to add a new EVM blockchain (e.g., BNB, Polygon, Arbitrum, Base, etc.)
-- The chain needs to be compatible with APIs: `eth_blockNumber`, `eth_getBlockByNumber`, `eth_getBlockReceipts`
+- The chain needs to be compatible with APIs: `eth_blockNumber`, `eth_getBlockByNumber`, `eth_getBlockReceipts`, `trace_block` (traces are required for trace/job pipelines)
 
 ## Implementation Steps
 
@@ -33,19 +33,27 @@ python script/check_rpcs.py 56 --timeout 15 --workers 20
 
 The script will:
 - Automatically fetch RPC list from chainlist.org by chainId
-- Parallel validation: `eth_blockNumber` → `eth_getBlockByNumber` → `eth_getBlockReceipts`
+- Parallel validation of 4 methods: `eth_blockNumber` → `eth_getBlockByNumber` → `eth_getBlockReceipts` (group A, output to `<ENV_VAR>_RPCS`) and `trace_block` (checked separately, output to `<ENV_VAR>_TRACE_BLOCK_RPCS`)
 - Output `<ENV_VAR>=...` line to copy into `.env`
 
 **Lookup chainId**: https://chainlist.org (or https://chainid.network)
 
 ### Step 2: Update `chainslake-run/.env`
 
-Append the following line to the end of `.env`:
+Append the following lines to the end of `.env`:
 ```
 <CHAIN_UPPER>_RPCS=<comma_separated_passing_rpc_list>
+<CHAIN_UPPER>_TRACE_BLOCK_RPCS=<comma_separated_trace_block_rpc_list>
 ```
 
-Example: `BNB_RPCS=https://bsc-dataseed1.ninicoin.io,...`
+- `<CHAIN_UPPER>_RPCS`: RPCs passing the 3 base methods (`eth_blockNumber`, `eth_getBlockByNumber`, `eth_getBlockReceipts`) — used by origin/extract/transaction/log jobs
+- `<CHAIN_UPPER>_TRACE_BLOCK_RPCS`: RPCs supporting `trace_block`, each trace containing `blockHash`, `blockNumber`, `action` — used by trace jobs
+
+Example:
+```
+BNB_RPCS=https://bsc-dataseed1.ninicoin.io,...
+BNB_TRACE_BLOCK_RPCS=https://bsc-dataseed1.ninicoin.io,...
+```
 
 ### Step 3: Create `jobs/<chain_name>/application.properties`
 
@@ -107,6 +115,8 @@ contract_erc20_tokens → token_erc20_transfer
 
 - **`number_block_per_partition`**: BNB produces ~1 block/3 seconds, so use 1000 to make each partition ≈ ~50 minutes of data
 - **Env variables in .sh**: Origin jobs and extract/transactions, extract/logs need `export $(cat $CHAINSLAKE_RUN_DIR/.env)` at the beginning to load the RPC list. The `blocks.sh` job (using sql.transformer) does not need this.
+- **trace_block is checked separately**: `check_rpcs.py` runs trace_block on ALL RPCs (independent of the 3 base methods). RPCs supporting it go to `<CHAIN>_TRACE_BLOCK_RPCS`, even if they fail the 3 base methods.
+- **trace_block empty array is valid**: `trace_block` may return an empty array for blocks with no traces — this is still PASS (the method is supported). Only `result=null` or a missing `blockHash`/`blockNumber`/`action` field marks it as FAIL.
 - **`decoded_log.sh` accepts parameters**: This script accepts `$1` (table_name) and `$2` (run_mode) like Ethereum, don't hardcode
 - **RPC check**: Some RPCs return `result=null` for `eth_getBlockReceipts` — this indicates no support, must be filtered out
 - **Timeout**: Use timeout=10s when checking RPCs; some RPCs are slow but still valid — increase to 15s if needed

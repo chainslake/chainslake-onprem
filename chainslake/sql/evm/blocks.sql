@@ -1,7 +1,8 @@
 frequent_type=block
-list_input_tables=${chain_name}_origin.transaction_blocks,${chain_name}_origin.blocks_receipt
+list_input_tables=${chain_name}_origin.transaction_blocks,${chain_name}_origin.blocks_receipt,${chain_name}_origin.traces
 transaction_blocks=${chain_name}_origin.transaction_blocks
 blocks_receipt=${chain_name}_origin.blocks_receipt
+traces=${chain_name}_origin.traces
 output_table=${chain_name}.blocks
 re_partition_by_range=block_date,block_number
 partition_by=block_date
@@ -20,12 +21,20 @@ with transaction_blocks as (
     from ${blocks_receipt}
     where block_number >= ${from} and block_number <= ${to}
 )
+, traces as (
+    select block_date, block_number, block_time, number_traces
+    from ${traces}
+    where block_number >= ${from} and block_number <= ${to}
+)
 
 select t.block_date
     , t.block_number
     , t.block_time
     , t.number_tx
     , l.number_logs
+    , tr.number_traces
 from transaction_blocks t
-inner join blocks_receipt l
+left join blocks_receipt l
 on t.block_number = l.block_number
+left join traces tr 
+on t.block_number = tr.block_number

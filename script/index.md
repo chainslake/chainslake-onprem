@@ -9,16 +9,36 @@ This directory contains Python scripts written by Agents to serve repetitive tas
 ---
 
 ## check_rpcs.py
-- **Purpose**: Check RPC list for any EVM chain from chainlist.org. Validates that each RPC fully supports the 3 required APIs (eth_blockNumber, eth_getBlockByNumber, eth_getBlockReceipts) and outputs the `<ENV_VAR>=...` string to paste into `.env`.
+- **Purpose**: Check RPC list for any EVM chain from chainlist.org. Validates each RPC against 4 methods: eth_blockNumber, eth_getBlockByNumber, eth_getBlockReceipts, and trace_block (traces with blockHash/blockNumber/action). Outputs `<CHAIN>_RPCS=...` for RPCs passing the 3 base methods and `<CHAIN>_TRACE_BLOCK_RPCS=...` for RPCs supporting trace_block.
 - **Input**:
   - Positional: `chain` — chain ID (number, e.g., `56`) or chain name (substring, e.g., `"BNB Smart Chain Mainnet"`)
   - `--timeout` — timeout per request (seconds, default 10)
   - `--workers` — number of parallel threads (default 10)
   - `--env-var` — output environment variable name (default: auto-inferred from chain name, e.g., `BNB_RPCS`)
-- **Output**: PASS/FAIL per RPC + `<ENV_VAR>=<rpc1,rpc2,...>` line to copy into `chainslake-run/.env`
+- **Output**: PASS/FAIL per RPC (all 4 methods) + `<CHAIN>_RPCS=<rpc1,rpc2,...>` and `<CHAIN>_TRACE_BLOCK_RPCS=<rpc1,rpc2,...>` lines to copy into `.env`
 - **Examples**:
   - `python script/check_rpcs.py 56`
   - `python script/check_rpcs.py 1 --env-var ETHEREUM_RPCS`
+
+---
+
+## get_from_rpc.py
+- **Purpose**: Gọi 1 trong 4 JSON-RPC method trong `check_rpcs.py` (`eth_blockNumber`, `eth_getBlockByNumber`, `eth_getBlockReceipts`, `trace_block`) dùng danh sách RPC từ `chainslake-run/.env`. Thử từng RPC theo thứ tự đến khi có kết quả, in JSON response. Gọi `trace_block` sẽ tự động dùng `<CHAIN>_TRACE_BLOCK_RPCS` (nếu rỗng thì fallback sang `<CHAIN>_RPCS` kèm cảnh báo); 3 method còn lại dùng `<CHAIN>_RPCS`.
+- **Input**:
+  - Positional 1: `chain_name` — tên chain để lookup `<CHAIN>_RPCS` (case-insensitive, e.g. `ethereum` → `ETHEREUM_RPCS`)
+  - Positional 2: `method_name` — 1 trong 4 method ở trên (method khác → báo lỗi)
+  - Positional 3 (optional): `block_number` — bắt buộc với 3 method có block, tự convert sang hex. Không cần cho `eth_blockNumber`
+  - `--param <json>` — JSON array các param thêm, nối sau block number (e.g. `--param '[false]'` cho `eth_getBlockByNumber` để lấy tx hash thay vì full tx object; mặc định full tx = true giống `check_rpcs.py`)
+  - `--env-var` — đọc biến env cụ thể (bỏ qua auto-inference và auto-switch TRACE_BLOCK)
+  - `--env-file` — đường dẫn file `.env` (default `chainslake-run/.env`)
+  - `--timeout` — timeout mỗi request (giây, default 10)
+- **Output**: JSON result thô của RPC đầu tiên thành công; exit code 0 khi thành công, 1 nếu tất cả RPC fail
+- **Examples**:
+  - `python script/get_from_rpc.py ethereum eth_blockNumber`
+  - `python script/get_from_rpc.py ethereum eth_getBlockByNumber 12345`
+  - `python script/get_from_rpc.py ethereum eth_getBlockByNumber 12345 --param '[false]'`
+  - `python script/get_from_rpc.py ethereum eth_getBlockReceipts 12345`
+  - `python script/get_from_rpc.py ethereum trace_block 12345` (tự dùng `ETHEREUM_TRACE_BLOCK_RPCS`)
 
 ---
 

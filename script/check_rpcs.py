@@ -3,10 +3,13 @@ Script to check RPC endpoints for any EVM chain.
 
 Purpose:
   - Automatically fetch RPC list from chainlist.org by chain_id or chain name
-  - Check each RPC against 3 requirements:
+  - Check each RPC against 4 requirements:
       1. eth_blockNumber — return latest block number
       2. eth_getBlockByNumber — return full block data (with transactions)
       3. eth_getBlockReceipts — return block receipts (including logs)
+      4. trace_block — return traces with blockHash, blockNumber, action fields
+  - RPCs passing the 3 base methods go to <CHAIN>_RPCS; RPCs supporting
+    trace_block go to <CHAIN>_TRACE_BLOCK_RPCS
   - Print PASS/FAIL list and <ENV_VAR>=<rpc1,rpc2,...> string to paste into .env
 
 Input (CLI argument):
@@ -20,9 +23,10 @@ Options:
               e.g.: --env-var BNB_RPCS
 
 Output:
-  - PASS/FAIL per RPC
+  - PASS/FAIL per RPC (for all 4 methods)
   - Summary counts
-  - <ENV_VAR>=... line to copy into .env
+  - <CHAIN>_RPCS=... line to copy into .env (RPCs passing 3 base methods)
+  - <CHAIN>_TRACE_BLOCK_RPCS=... line (RPCs supporting trace_block)
 
 Examples:
   python script/check_rpcs.py 56
@@ -138,6 +142,41 @@ def check_rpc(url: str, timeout: int) -> tuple:
         return url, False, f"{type(e).__name__}: {e}"
 
 
+def check_rpc_trace_block(url: str, block_hex: str, timeout: int) -> tuple:
+    """
+    Check if an RPC supports the trace_block method.
+    Requires the response to contain objects with blockHash, blockNumber, action fields.
+    Returns (url, passed: bool, reason: str)
+    """
+    try:
+        resp = rpc_call(url, "trace_block", [block_hex], timeout)
+        result = resp.get("result")
+        if result is None:
+            return url, False, "trace_block: result=null (not supported)"
+        if not isinstance(result, list):
+            return url, False, f"trace_block: result is not an array, got {type(result).__name__}"
+        if len(result) == 0:
+            # Empty array is acceptable (block has no traces, e.g. no transactions)
+            return url, True, "OK (trace_block returned empty array — block has no traces)"
+
+        # Check first trace object for required fields
+        required_trace_fields = ["blockHash", "blockNumber", "action"]
+        ok, missing = has_fields(result[0], required_trace_fields)
+        if not ok:
+            return url, False, f"trace_block: trace object missing fields {missing}"
+
+        return url, True, f"OK (trace_block returned {len(result)} traces)"
+
+    except urllib.error.HTTPError as e:
+        return url, False, f"trace_block HTTPError: {e.code} {e.reason}"
+    except urllib.error.URLError as e:
+        return url, False, f"trace_block URLError: {e.reason}"
+    except TimeoutError:
+        return url, False, "trace_block Timeout"
+    except Exception as e:
+        return url, False, f"trace_block {type(e).__name__}: {e}"
+
+
 # ─── Chainlist fetching ────────────────────────────────────────────────────────
 
 def fetch_chainlist() -> list:
@@ -210,6 +249,17 @@ def infer_env_var(chain_name: str) -> str:
     return f"{first_word}_RPCS"
 
 
+def infer_trace_block_env_var(chain_name: str) -> str:
+    """
+    Auto-infer trace_block environment variable name from chain name.
+    e.g.: "BNB Smart Chain Mainnet" → "BNB_TRACE_BLOCK_RPCS"
+           "Ethereum Mainnet"        → "ETHEREUM_TRACE_BLOCK_RPCS"
+    """
+    first_word = chain_name.strip().split()[0].upper()
+    first_word = "".join(c for c in first_word if c.isalnum())
+    return f"{first_word}_TRACE_BLOCK_RPCS"
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -250,6 +300,8 @@ def main():
     print(f"Chain: {chain_name} (chainId={chain_id})")
     print(f"Found {len(rpc_list)} free HTTPS RPCs")
     print(f"Environment variable: {env_var}")
+    trace_block_env_var = infer_trace_block_env_var(chain_name)
+    print(f"Trace block env var: {trace_block_env_var}")
     print(f"Timeout: {args.timeout}s | Workers: {args.workers}")
     print("=" * 70)
 
@@ -285,6 +337,56 @@ def main():
     print()
     print(f"# Add the following line to chainslake-run/.env:")
     print(f"{env_var}=" + ",".join(passed))
+
+    # ─── trace_block check (independent, always run) ────────────────────────
+    print("\n" + "=" * 70)
+    print(f"\nChecking trace_block support on ALL {len(rpc_list)} RPCs...")
+
+    # Get a recent block number from a known-good RPC (first that passed)
+    # so trace_block can be checked against a valid block on the chain.
+    block_hex = None
+    for src in passed:
+        try:
+            resp = rpc_call(src, "eth_blockNumber", [], args.timeout)
+            block_hex = resp.get("result")
+            if block_hex:
+                break
+        except Exception:
+            continue
+
+    if block_hex:
+        trace_block_passed = []
+        trace_block_failed = []
+
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = {
+                executor.submit(check_rpc_trace_block, url, block_hex, args.timeout): url
+                for url in rpc_list
+            }
+            for future in as_completed(futures):
+                url, ok, reason = future.result()
+                status = "PASS" if ok else "FAIL"
+                print(f"{status} | {url}")
+                if not ok:
+                    print(f"       Reason: {reason}")
+                if ok:
+                    trace_block_passed.append(url)
+                else:
+                    trace_block_failed.append((url, reason))
+
+        print(f"\nTrace block results: {len(trace_block_passed)} PASS / {len(trace_block_failed)} FAIL / {len(rpc_list)} total\n")
+
+        if trace_block_passed:
+            print(f"RPCs that support trace_block:")
+            for url in trace_block_passed:
+                print(f"   {url}")
+            print()
+            print(f"# Add the following line to chainslake-run/.env:")
+            print(f"{trace_block_env_var}=" + ",".join(trace_block_passed))
+        else:
+            print("Warning: No RPCs support trace_block!", file=sys.stderr)
+    else:
+        print("Skipping trace_block check — could not get latest block number from any passing RPC.")
 
 
 if __name__ == "__main__":
