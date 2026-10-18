@@ -3,405 +3,334 @@
   "default_agent": "team-lead",
   "instructions": ["AGENTS.md"],
 
-  "agent": {
+  "permissions": [
+    { "action": "external_directory", "resource": "*", "effect": "ask" }
+  ],
+
+  "agents": {
     "build": {
       "description": "Agent build — phát triển script/query/skill/agent mới, điều chỉnh chính sách chung",
       "mode": "primary",
-      "prompt": "{file:AGENT_INSTRUCTION.md}",
+      "system": "{file:AGENT_INSTRUCTION.md}",
       "color": "#4B4646",
-      "permission": {
-        "edit": "allow",
-        "bash": "allow",
-        "skill": "allow"
-      }
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "allow" },
+        { "action": "shell", "resource": "*", "effect": "allow" },
+        { "action": "skill", "resource": "*", "effect": "allow" }
+      ]
     },
 
     "plan": {
       "description": "Phân tích và lập kế hoạch — read-only, không sửa code",
       "mode": "primary",
-      "temperature": 0.1,
       "color": "#656363",
-      "permission": {
-        "edit": "deny",
-        "bash": "deny",
-        "skill": "allow"
-      }
+      "request": { "body": { "temperature": 0.1 } },
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "skill", "resource": "*", "effect": "allow" }
+      ]
     },
 
     "team-lead": {
       "description": "Điều phối Data Team — giao task, theo dõi, tổng hợp kết quả. READ-ONLY: không edit/exec ngoài docs/",
       "mode": "primary",
-      "prompt": "{file:.opencode/agents/team-lead.md}",
+      "system": "{file:.opencode/agents/team-lead.md}",
       "model": "opencode/big-pickle",
       "color": "#E74C3C",
-      "temperature": 0.3,
-      "permission": {
-        "task": { "*": "allow" },
-        "edit": {
-          "*": "deny",
-          "docs/**": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "mkdir docs/*": "allow",
-          "mkdir -p docs/*": "allow",
-          "mkdir -p docs/*/*": "allow"
-        },
-        "read": {
-          "*": "deny",
-          "docs/**": "allow",
-          ".opencode/agents/*.md": "allow",
-          ".opencode/skills/*/SKILL.md": "allow",
-          "catalog/**": "allow",
-          "query/README.md": "allow",
-          "script/index.md": "allow",
-          "OVERVIEW.md": "allow",
-          "AGENTS.md": "allow",
-          "AGENT_INSTRUCTION.md": "allow",
-          "guide_book.md": "allow",
-          "CODING_CONVENTIONS.md": "allow",
-          "opencode.json": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "docs/**": "allow",
-          ".opencode/agents/*.md": "allow",
-          ".opencode/skills/*/SKILL.md": "allow",
-          "catalog/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "docs/**": "allow",
-          ".opencode/agents/*.md": "allow",
-          ".opencode/skills/*/SKILL.md": "allow",
-          "catalog/**": "allow"
-        }
-      }
+      "request": { "body": { "temperature": 0.3 } },
+      "permissions": [
+        { "action": "subagent", "resource": "*", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "docs/**", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "mkdir docs/*", "effect": "allow" },
+        { "action": "shell", "resource": "mkdir -p docs/*", "effect": "allow" },
+        { "action": "shell", "resource": "mkdir -p docs/*/*", "effect": "allow" },
+
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "docs/**", "effect": "allow" },
+        { "action": "read", "resource": ".opencode/agents/*.md", "effect": "allow" },
+        { "action": "read", "resource": ".opencode/skills/*/SKILL.md", "effect": "allow" },
+        { "action": "read", "resource": "catalog/**", "effect": "allow" },
+        { "action": "read", "resource": "query/README.md", "effect": "allow" },
+        { "action": "read", "resource": "script/index.md", "effect": "allow" },
+        { "action": "read", "resource": "OVERVIEW.md", "effect": "allow" },
+        { "action": "read", "resource": "AGENTS.md", "effect": "allow" },
+        { "action": "read", "resource": "AGENT_INSTRUCTION.md", "effect": "allow" },
+        { "action": "read", "resource": "guide_book.md", "effect": "allow" },
+        { "action": "read", "resource": "CODING_CONVENTIONS.md", "effect": "allow" },
+        { "action": "read", "resource": "opencode.json", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "docs/**", "effect": "allow" },
+        { "action": "glob", "resource": ".opencode/agents/*.md", "effect": "allow" },
+        { "action": "glob", "resource": ".opencode/skills/*/SKILL.md", "effect": "allow" },
+        { "action": "glob", "resource": "catalog/**", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "docs/**", "effect": "allow" },
+        { "action": "grep", "resource": ".opencode/agents/*.md", "effect": "allow" },
+        { "action": "grep", "resource": ".opencode/skills/*/SKILL.md", "effect": "allow" },
+        { "action": "grep", "resource": "catalog/**", "effect": "allow" }
+      ]
     },
 
     "ba": {
       "description": "Business Analyst — giao tiếp User, viết Data_Requirement.md",
       "mode": "subagent",
-      "prompt": "{file:.opencode/agents/ba.md}",
+      "system": "{file:.opencode/agents/ba.md}",
       "model": "opencode/big-pickle",
       "color": "#3498DB",
-      "temperature": 0.4,
-      "permission": {
-        "read": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow"
-        },
-        "list": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow"
-        },
-        "edit": {
-          "*": "deny",
-          "docs/**": "allow"
-        },
-        "bash": {
-          "*": "deny"
-        },
-        "websearch": "allow",
-        "webfetch": "allow"
-      }
+      "request": { "body": { "temperature": 0.4 } },
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "docs/**", "effect": "allow" },
+        { "action": "read", "resource": "template/**", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "docs/**", "effect": "allow" },
+        { "action": "glob", "resource": "template/**", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "docs/**", "effect": "allow" },
+        { "action": "grep", "resource": "template/**", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "docs/**", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+
+        { "action": "websearch", "resource": "*", "effect": "allow" },
+        { "action": "webfetch", "resource": "*", "effect": "allow" }
+      ]
     },
 
     "data-architect": {
       "description": "Data Architect — thiết kế schema, viết design doc theo format catalog",
       "mode": "subagent",
-      "prompt": "{file:.opencode/agents/data-architect.md}",
+      "system": "{file:.opencode/agents/data-architect.md}",
       "model": "opencode/big-pickle",
       "color": "#9B59B6",
-      "temperature": 0.2,
-      "permission": {
-        "read": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow"
-        },
-        "list": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow"
-        },
-        "edit": {
-          "*": "deny",
-          "docs/*/design/*": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "python script/build_catalog.py": "allow",
-          "python script/build_lineage_from_design.py": "allow"
-        }
-      }
+      "request": { "body": { "temperature": 0.2 } },
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "docs/**", "effect": "allow" },
+        { "action": "read", "resource": "template/**", "effect": "allow" },
+        { "action": "read", "resource": "catalog/**", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "docs/**", "effect": "allow" },
+        { "action": "glob", "resource": "template/**", "effect": "allow" },
+        { "action": "glob", "resource": "catalog/**", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "docs/**", "effect": "allow" },
+        { "action": "grep", "resource": "template/**", "effect": "allow" },
+        { "action": "grep", "resource": "catalog/**", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "docs/*/design/*", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "python script/build_catalog.py *", "effect": "allow" },
+        { "action": "shell", "resource": "python script/build_lineage_from_design.py *", "effect": "allow" }
+      ]
     },
 
     "data-engineer": {
       "description": "Data Engineer — phát triển job (.sh/.sql/ABI), test trên _dev, triển khai production, UAT, quản lý DAG, setup chain mới",
       "mode": "subagent",
-      "prompt": "{file:.opencode/agents/data-engineer.md}",
+      "system": "{file:.opencode/agents/data-engineer.md}",
       "model": "opencode/big-pickle",
       "color": "#16A085",
-      "temperature": 0.2,
-      "permission": {
-        "read": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "chainslake-run/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "guide_book.md": "allow",
-          "CODING_CONVENTIONS.md": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "chainslake-run/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "chainslake-run/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "list": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "chainslake-run/**": "allow",
-          "docker/**": "allow",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "edit": {
-          "*": "deny",
-          "chainslake/**": "allow",
-          "chainslake-run/**": "allow",
-          "docs/*/design/*": "allow",
-          "docs/*/development.md": "allow",
-          "docs/*/UAT.md": "allow",
-          "script/.env": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "python query/*": "allow",
-          "python script/*": "allow",
-          "curl *": "allow",
-          "docker ps": "allow",
-          "docker ps *": "allow",
-          "docker compose up": "allow",
-          "docker compose up *": "allow",
-          "docker compose down": "allow",
-          "docker compose down *": "allow",
-          "docker compose ps": "allow",
-          "docker compose ps *": "allow",
-          "docker compose logs *": "allow",
-          "chmod +x chainslake/jobs/*/*.sh": "allow",
-          "chmod +x chainslake/jobs/*/**/*.sh": "allow",
-          "* > script/*": "deny",
-          "* >> script/*": "deny",
-          "* > query/*": "deny",
-          "* >> query/*": "deny",
-          "* > .opencode/skills/*": "deny",
-          "* >> .opencode/skills/*": "deny",
-          "* > opencode.json*": "deny",
-          "* >> opencode.json*": "deny",
-          "touch script/*": "deny",
-          "touch query/*": "deny",
-          "touch .opencode/skills/*": "deny",
-          "mkdir script/*": "deny",
-          "mkdir query/*": "deny",
-          "mkdir .opencode/skills/*": "deny",
-          "cp * script/*": "deny",
-          "cp * query/*": "deny",
-          "cp * .opencode/skills/*": "deny",
-          "mv * script/*": "deny",
-          "mv * query/*": "deny",
-          "mv * .opencode/skills/*": "deny",
-          "cd docker": "allow",
-          "cp env_example .env": "allow",
-          "bash download_lib.sh": "allow",
-          "cat chainslake/airflow/standalone_admin_password.txt": "allow",
-          "cp script/env_example script/.env": "allow"
-        },
-        "skill": "allow"
-      }
+      "request": { "body": { "temperature": 0.2 } },
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "chainslake/**", "effect": "allow" },
+        { "action": "read", "resource": "chainslake-run/**", "effect": "allow" },
+        { "action": "read", "resource": "docker/**", "effect": "allow" },
+        { "action": "read", "resource": "docs/**", "effect": "allow" },
+        { "action": "read", "resource": "template/**", "effect": "allow" },
+        { "action": "read", "resource": "guide_book.md", "effect": "allow" },
+        { "action": "read", "resource": "CODING_CONVENTIONS.md", "effect": "allow" },
+        { "action": "read", "resource": "script/**", "effect": "allow" },
+        { "action": "read", "resource": "query/**", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "chainslake/**", "effect": "allow" },
+        { "action": "glob", "resource": "chainslake-run/**", "effect": "allow" },
+        { "action": "glob", "resource": "docker/**", "effect": "allow" },
+        { "action": "glob", "resource": "docs/**", "effect": "allow" },
+        { "action": "glob", "resource": "template/**", "effect": "allow" },
+        { "action": "glob", "resource": "script/**", "effect": "allow" },
+        { "action": "glob", "resource": "query/**", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "chainslake/**", "effect": "allow" },
+        { "action": "grep", "resource": "chainslake-run/**", "effect": "allow" },
+        { "action": "grep", "resource": "docker/**", "effect": "allow" },
+        { "action": "grep", "resource": "docs/**", "effect": "allow" },
+        { "action": "grep", "resource": "template/**", "effect": "allow" },
+        { "action": "grep", "resource": "script/**", "effect": "allow" },
+        { "action": "grep", "resource": "query/**", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "chainslake/**", "effect": "allow" },
+        { "action": "edit", "resource": "chainslake-run/**", "effect": "allow" },
+        { "action": "edit", "resource": "docs/*/design/*", "effect": "allow" },
+        { "action": "edit", "resource": "docs/*/development.md", "effect": "allow" },
+        { "action": "edit", "resource": "docs/*/UAT.md", "effect": "allow" },
+        { "action": "edit", "resource": "script/.env", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "python query/*", "effect": "allow" },
+        { "action": "shell", "resource": "python script/*", "effect": "allow" },
+        { "action": "shell", "resource": "curl *", "effect": "allow" },
+        { "action": "shell", "resource": "docker ps", "effect": "allow" },
+        { "action": "shell", "resource": "docker ps *", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose up", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose up *", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose down", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose down *", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose ps", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose ps *", "effect": "allow" },
+        { "action": "shell", "resource": "docker compose logs *", "effect": "allow" },
+        { "action": "shell", "resource": "chmod +x chainslake/jobs/*/*.sh", "effect": "allow" },
+        { "action": "shell", "resource": "chmod +x chainslake/jobs/*/**/*.sh", "effect": "allow" },
+        { "action": "shell", "resource": "* > script/*", "effect": "deny" },
+        { "action": "shell", "resource": "* >> script/*", "effect": "deny" },
+        { "action": "shell", "resource": "* > query/*", "effect": "deny" },
+        { "action": "shell", "resource": "* >> query/*", "effect": "deny" },
+        { "action": "shell", "resource": "* > .opencode/skills/*", "effect": "deny" },
+        { "action": "shell", "resource": "* >> .opencode/skills/*", "effect": "deny" },
+        { "action": "shell", "resource": "* > opencode.json*", "effect": "deny" },
+        { "action": "shell", "resource": "* >> opencode.json*", "effect": "deny" },
+        { "action": "shell", "resource": "touch script/*", "effect": "deny" },
+        { "action": "shell", "resource": "touch query/*", "effect": "deny" },
+        { "action": "shell", "resource": "touch .opencode/skills/*", "effect": "deny" },
+        { "action": "shell", "resource": "mkdir script/*", "effect": "deny" },
+        { "action": "shell", "resource": "mkdir query/*", "effect": "deny" },
+        { "action": "shell", "resource": "mkdir .opencode/skills/*", "effect": "deny" },
+        { "action": "shell", "resource": "cp * script/*", "effect": "deny" },
+        { "action": "shell", "resource": "cp * query/*", "effect": "deny" },
+        { "action": "shell", "resource": "cp * .opencode/skills/*", "effect": "deny" },
+        { "action": "shell", "resource": "mv * script/*", "effect": "deny" },
+        { "action": "shell", "resource": "mv * query/*", "effect": "deny" },
+        { "action": "shell", "resource": "mv * .opencode/skills/*", "effect": "deny" },
+        { "action": "shell", "resource": "cd docker", "effect": "allow" },
+        { "action": "shell", "resource": "cp env_example .env", "effect": "allow" },
+        { "action": "shell", "resource": "bash download_lib.sh", "effect": "allow" },
+        { "action": "shell", "resource": "cat chainslake/airflow/standalone_admin_password.txt", "effect": "allow" },
+        { "action": "shell", "resource": "cp script/env_example script/.env", "effect": "allow" },
+
+        { "action": "skill", "resource": "*", "effect": "allow" }
+      ]
     },
 
     "tester": {
       "description": "Tester — kiểm thử job, viết test case, chạy test trên _dev tables",
       "mode": "subagent",
-      "prompt": "{file:.opencode/agents/tester.md}",
+      "system": "{file:.opencode/agents/tester.md}",
       "model": "opencode/big-pickle",
       "color": "#F39C12",
-      "temperature": 0.1,
-      "permission": {
-        "read": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "guide_book.md": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "list": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "edit": {
-          "*": "deny",
-          "docs/*/test/*": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "python query/*": "allow",
-          "python script/*": "allow"
-        }
-      }
+      "request": { "body": { "temperature": 0.1 } },
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "docs/**", "effect": "allow" },
+        { "action": "read", "resource": "template/**", "effect": "allow" },
+        { "action": "read", "resource": "guide_book.md", "effect": "allow" },
+        { "action": "read", "resource": "script/**", "effect": "allow" },
+        { "action": "read", "resource": "query/**", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "docs/**", "effect": "allow" },
+        { "action": "glob", "resource": "template/**", "effect": "allow" },
+        { "action": "glob", "resource": "script/**", "effect": "allow" },
+        { "action": "glob", "resource": "query/**", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "docs/**", "effect": "allow" },
+        { "action": "grep", "resource": "template/**", "effect": "allow" },
+        { "action": "grep", "resource": "script/**", "effect": "allow" },
+        { "action": "grep", "resource": "query/**", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "docs/*/test/*", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "python query/*", "effect": "allow" },
+        { "action": "shell", "resource": "python script/*", "effect": "allow" }
+      ]
     },
 
     "data-analyst": {
       "description": "Data Analyst — xây dựng Metabase, viết truy vấn tối ưu, cập nhật kết quả",
       "mode": "subagent",
-      "prompt": "{file:.opencode/agents/data-analyst.md}",
+      "system": "{file:.opencode/agents/data-analyst.md}",
       "model": "opencode/big-pickle",
       "color": "#E67E22",
-      "temperature": 0.5,
-      "permission": {
-        "read": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "glob": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "grep": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "list": {
-          "*": "deny",
-          "docs/**": "allow",
-          "template/**": "allow",
-          "catalog/**": "allow",
-          "script/**": "allow",
-          "query/**": "allow"
-        },
-        "edit": {
-          "*": "deny",
-          "docs/*/Data_Requirement.md": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "python query/*": "allow",
-          "python script/*": "allow",
-          "mb *": "allow"
-        },
-        "skill": "allow"
-      }
+      "request": { "body": { "temperature": 0.5 } },
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "docs/**", "effect": "allow" },
+        { "action": "read", "resource": "template/**", "effect": "allow" },
+        { "action": "read", "resource": "catalog/**", "effect": "allow" },
+        { "action": "read", "resource": "script/**", "effect": "allow" },
+        { "action": "read", "resource": "query/**", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "docs/**", "effect": "allow" },
+        { "action": "glob", "resource": "template/**", "effect": "allow" },
+        { "action": "glob", "resource": "catalog/**", "effect": "allow" },
+        { "action": "glob", "resource": "script/**", "effect": "allow" },
+        { "action": "glob", "resource": "query/**", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "docs/**", "effect": "allow" },
+        { "action": "grep", "resource": "template/**", "effect": "allow" },
+        { "action": "grep", "resource": "catalog/**", "effect": "allow" },
+        { "action": "grep", "resource": "script/**", "effect": "allow" },
+        { "action": "grep", "resource": "query/**", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "docs/*/Data_Requirement.md", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "python query/*", "effect": "allow" },
+        { "action": "shell", "resource": "python script/*", "effect": "allow" },
+        { "action": "shell", "resource": "mb *", "effect": "allow" },
+
+        { "action": "skill", "resource": "*", "effect": "allow" }
+      ]
     },
 
     "writer": {
       "description": "Technical Writer — viết bài viết kỹ thuật, chia sẻ kiến thức về dự án Chainslake. Agent độc lập, chỉ kích hoạt bởi User, đọc toàn bộ file markdown của dự án",
       "mode": "primary",
-      "prompt": "{file:.opencode/agents/writer.md}",
+      "system": "{file:.opencode/agents/writer.md}",
       "model": "opencode/big-pickle",
       "color": "#2C3E50",
-      "temperature": 0.6,
-      "permission": {
-        "read": {
-          "**/*.md": "allow",
-          "*": "deny"
-        },
-        "glob": {
-          "**/*.md": "allow",
-          "*": "deny"
-        },
-        "grep": {
-          "**/*.md": "allow",
-          "*": "deny"
-        },
-        "list": {
-          "**/*.md": "allow",
-          "*": "deny"
-        },
-        "edit": {
-          "*": "deny",
-          "blog/**": "allow"
-        },
-        "bash": "deny",
-        "skill": "allow"
-      }
+      "request": { "body": { "temperature": 0.6 } },
+      "permissions": [
+        { "action": "read", "resource": "*", "effect": "deny" },
+        { "action": "read", "resource": "**/*.md", "effect": "allow" },
+
+        { "action": "glob", "resource": "*", "effect": "deny" },
+        { "action": "glob", "resource": "**/*.md", "effect": "allow" },
+
+        { "action": "grep", "resource": "*", "effect": "deny" },
+        { "action": "grep", "resource": "**/*.md", "effect": "allow" },
+
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "edit", "resource": "blog/**", "effect": "allow" },
+
+        { "action": "shell", "resource": "*", "effect": "deny" },
+
+        { "action": "skill", "resource": "*", "effect": "allow" }
+      ]
     }
   }
 }

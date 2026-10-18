@@ -17,7 +17,7 @@ chainslake-onprem/
 ├── .opencode/skills/     # [BUILD-ONLY] Skills you write (opencode auto-scans)
 │   └── <skill>/SKILL.md  # Each skill is a SKILL.md file with frontmatter name + description
 ├── .opencode/agents/     # Prompts for each agent in the team
-├── opencode.json         # Agent + permission configuration
+├── opencode.json         # Agent + permissions configuration (OpenCode V2 format)
 ├── AGENTS.md             # Shared rules for the entire team
 ├── AGENT_INSTRUCTION.md  # This prompt
 └── CODING_CONVENTIONS.md # Project conventions (must follow when writing code)
@@ -123,13 +123,14 @@ Notes:
    - Concise, only keep role-specific content — DO NOT repeat shared rules already in `AGENTS.md`
    - Each process item should be brief: "call skill/tool X for Y" — details belong in skills
    - List correct skills/tools permitted for the role
-2. Modify `opencode.json`: update `description`, `prompt` (point to file), `model`, `temperature`, `permission` accordingly.
-3. When configuring permissions, narrow down to the exact scope the role needs:
-   - `read`/`glob`/`grep`/`list` only for directories the role actually needs
-   - No need for `read .opencode/skills/**` — skill tool loads automatically
-   - Only roles using skills should keep `"skill": "allow"`
-   - `edit`/`bash` limited to exact files/commands the role operates on
-4. After modification, validate JSON: `python3 -c "import json; json.load(open('opencode.json'))"`.
+2. Modify `opencode.json` (native V2 format): update `agents.<name>.description`, `system` (point to the prompt file with `{file:...}`), `model`, `request.body.temperature`, `permissions` accordingly.
+3. When configuring `permissions`, use the ordered array form — broad rule first, specific exceptions after, because **the last matching rule wins**:
+   - One rule = `{ "action": <tool>, "resource": <value>, "effect": "allow" | "deny" | "ask" }`
+   - Actions: `read`, `glob`, `grep`, `edit` (covers edit/write/patch), `shell` (V1 `bash`), `subagent` (V1 `task`), `skill`, `webfetch`, `websearch`, `external_directory`. V2 has no `list` action — listing a directory is a `read`.
+   - `read`/`edit` resources are normalized paths; `glob` uses the requested glob, `grep` the requested regex (not the path), `shell` the command string
+   - Narrow down to the exact scope the role needs; no need to allow reading `.opencode/skills/**` — the skill tool loads skills automatically
+   - Only roles using skills need `{ "action": "skill", "resource": "*", "effect": "allow" }`
+4. After modification, validate JSON: `python3 -c "import json; json.load(open('opencode.json'))"`, then inspect the resolved config with `opencode debug config` (must show no warnings).
 
 ## Working Principles
 
